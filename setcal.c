@@ -16,7 +16,7 @@
 
 // Structs
 typedef struct {
-    char *data;
+    char *chars;
     int currentLength;
     int maxLength;
 } CharList;
@@ -59,8 +59,8 @@ CharList CharlistConstructor();
 void AddToCharList(CharList *, char);
 void CharlistDtor(CharList *);
 DataLineList LinesConstructor();
-void AddLine(DataLineList *, DataLine);
-void FreeLines(DataLineList *);
+void AddToDataLineList(DataLineList *, DataLine);
+void FreeDataLineList(DataLineList *);
 
 Universum UniversumConstructor();
 int InitUniversum(Universum *, char *);
@@ -86,27 +86,30 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
+// ================= DYNAMIC STRUCTURE MANIPULATION =================
+
 CharList CharlistConstructor() {
-    CharList list = {.data = NULL, .maxLength = DEFAULT_ALLOCATION_SIZE, .currentLength = 0};
-    list.data = malloc(list.maxLength * sizeof(char));
+    CharList list = {.chars = NULL, .maxLength = DEFAULT_ALLOCATION_SIZE, .currentLength = 0};
+    list.chars = malloc(list.maxLength * sizeof(char));
     return list;
 }
 
 void AddToCharList(CharList *list, char c) {
     if (list->currentLength == list->maxLength) {
-        list->data = realloc(list->data, sizeof(list->data) * 2);
-        if (list->data == NULL) return; // TODO: fix return value
+        list->chars = realloc(list->chars, sizeof(list->chars) * 2);
+        if (list->chars == NULL) return; // TODO: fix return value
         
         list->maxLength *= 2;
     }
 
-    list->data[list->currentLength] = c;
+    list->chars[list->currentLength] = c;
     list->currentLength++;
 }
 
 void CharlistDtor(CharList *list) {
-    if (list->data == NULL) return;
-    free(list->data);
+    if (list->chars == NULL) return;
+    free(list->chars);
+    list->chars = NULL;
 }
 
 DataLineList LinesConstructor() {
@@ -115,7 +118,7 @@ DataLineList LinesConstructor() {
     return list;
 }
 
-void AddLine(DataLineList *lines, DataLine line) {
+void AddToDataLineList(DataLineList *lines, DataLine line) {
     if (lines->currentRow == lines->maxRows) {
         lines->dataLines= realloc(lines->dataLines, sizeof(lines->dataLines) * 2);
         if(lines->dataLines == NULL) return; // TODO: fix return value
@@ -127,11 +130,13 @@ void AddLine(DataLineList *lines, DataLine line) {
     lines->currentRow++;
 }
 
-void FreeLines(DataLineList *lines) {
+void FreeDataLineList(DataLineList *lines) {
     if (lines->dataLines == NULL) return;
     free(lines->dataLines);
+    lines->dataLines = NULL;
 }
 
+// ==============================================================
 
 int GetDataFromFile(DataLineList *dataLineList, char *fileName) {
     FILE *file = fopen(fileName, "r");
@@ -147,7 +152,7 @@ int GetDataFromFile(DataLineList *dataLineList, char *fileName) {
         char currentChar = (char)charInt;
 
         // Adding non-keyword char to char list
-        if (dataLine.keyword != '\0' && currentChar != '\n') {
+        if (dataLine.keyword != '\0' && currentChar != '\n' && currentIndex != 1) {
             AddToCharList(&charList, currentChar);
         }
 
@@ -163,10 +168,12 @@ int GetDataFromFile(DataLineList *dataLineList, char *fileName) {
 
         // At the end of line
         if (currentChar == '\n') {
-            AddLine(dataLineList, dataLine);
+            AddToCharList(&charList, '\0'); // To end the string
+            AddToDataLineList(dataLineList, dataLine);
             charList = CharlistConstructor();
             dataLine.data = charList;
             dataLine.keyword = '\0';
+            currentIndex = -1; // bellow is incrementation
         }
         
         
