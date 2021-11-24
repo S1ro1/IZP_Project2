@@ -16,15 +16,10 @@
 
 // Structs
 typedef struct {
-    char *chars;
+    char *data;
     int currentLength;
     int maxLength;
-} CharList;
-
-typedef struct {
     char keyword;
-    CharList data;
-    int row;
 } DataLine;
 
 typedef struct {
@@ -55,9 +50,9 @@ typedef struct {
 
 // Prototypes
 
-CharList CharlistConstructor();
-void AddToCharList(CharList *, char);
-void CharlistDtor(CharList *);
+DataLine CharlistConstructor();
+void AddToCharList(DataLine *, char);
+void CharlistDtor(DataLine *);
 DataLineList LinesConstructor();
 void AddToDataLineList(DataLineList *, DataLine);
 void FreeDataLineList(DataLineList *);
@@ -83,33 +78,45 @@ int main(int argc, char *argv[]) {
 
     int error = GetDataFromFile(&lineList, argv[1]);
     (void) error;
+
+    for (int i= 0; i<lineList.currentRow; i++){ //checking if struct is correctly loaded will be deleted later on
+        printf("%c", lineList.dataLines[i].keyword);
+        for (int j= 0; lineList.dataLines[i].data[j]!='\0';j++){
+
+            printf("%c", lineList.dataLines[i].data[j]);
+        }
+        printf("\n");
+    }
+    
     return 0;
 }
 
 // ================= DYNAMIC STRUCTURE MANIPULATION =================
 
-CharList CharlistConstructor() {
-    CharList list = {.chars = NULL, .maxLength = DEFAULT_ALLOCATION_SIZE, .currentLength = 0};
-    list.chars = malloc(list.maxLength * sizeof(char));
+DataLine CharlistConstructor() {
+    DataLine list = {.data = NULL, .maxLength = DEFAULT_ALLOCATION_SIZE, .currentLength = 0, .keyword = '\0'};
+    list.data = malloc(list.maxLength * sizeof(char));
     return list;
 }
-
-void AddToCharList(CharList *list, char c) {
+void AddToCharList(DataLine *list, char c) {
     if (list->currentLength == list->maxLength) {
-        list->chars = realloc(list->chars, sizeof(list->chars) * 2);
-        if (list->chars == NULL) return; // TODO: fix return value
-        
+        char *tmp = realloc(list->data, sizeof(char) * 2* list->maxLength);
+        if (tmp == NULL){
+            printf("wrong allocation %d", list->maxLength); //test print
+            return;
+        }  // TODO: fix return value
+        list->data = tmp;
         list->maxLength *= 2;
     }
 
-    list->chars[list->currentLength] = c;
+    list->data[list->currentLength] = c;
     list->currentLength++;
 }
 
-void CharlistDtor(CharList *list) {
-    if (list->chars == NULL) return;
-    free(list->chars);
-    list->chars = NULL;
+void CharlistDtor(DataLine *list) {
+    if (list->data == NULL) return;
+    free(list->data);
+    list->data = NULL;
 }
 
 DataLineList LinesConstructor() {
@@ -120,9 +127,12 @@ DataLineList LinesConstructor() {
 
 void AddToDataLineList(DataLineList *lines, DataLine line) {
     if (lines->currentRow == lines->maxRows) {
-        lines->dataLines= realloc(lines->dataLines, sizeof(lines->dataLines) * 2);
-        if(lines->dataLines == NULL) return; // TODO: fix return value
-
+        DataLine *tmp= realloc(lines->dataLines, sizeof(DataLine) * 2* lines->maxRows);
+        if (tmp == NULL) {
+            printf("wrong allocation %d", lines->maxRows); //test print
+            return;
+            }// TODO: fix return value
+        lines->dataLines= tmp;
         lines->maxRows *= 2;
     }
 
@@ -142,8 +152,7 @@ int GetDataFromFile(DataLineList *dataLineList, char *fileName) {
     FILE *file = fopen(fileName, "r");
     if (file == NULL) return 1;
 
-    CharList charList = CharlistConstructor();
-    DataLine dataLine = {.data = charList, .keyword = '\0'};
+    DataLine charList = CharlistConstructor();
     
 
     int currentIndex = 0;
@@ -152,27 +161,25 @@ int GetDataFromFile(DataLineList *dataLineList, char *fileName) {
         char currentChar = (char)charInt;
 
         // Adding non-keyword char to char list
-        if (dataLine.keyword != '\0' && currentChar != '\n' && currentIndex != 1) {
+        if (charList.keyword != '\0' && currentChar != '\n' && currentIndex != 1) {
             AddToCharList(&charList, currentChar);
         }
 
         // Getting Keyword
-        if (dataLine.keyword == '\0') {
-            dataLine.keyword = currentChar;
+        if (charList.keyword == '\0') {
+            charList.keyword = currentChar;
         }
 
         // Keyword is not single char
-        if (dataLine.keyword != '\0' && currentIndex == 1 && currentChar != ' ') {
+        if (charList.keyword != '\0' && currentIndex == 1 && currentChar != ' ' && currentChar != '\n') {
             return 1;
         }
 
         // At the end of line
         if (currentChar == '\n') {
             AddToCharList(&charList, '\0'); // To end the string
-            AddToDataLineList(dataLineList, dataLine);
+            AddToDataLineList(dataLineList, charList);
             charList = CharlistConstructor();
-            dataLine.data = charList;
-            dataLine.keyword = '\0';
             currentIndex = -1; // bellow is incrementation
         }
         
