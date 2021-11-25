@@ -50,10 +50,10 @@ typedef struct {
 
 // Prototypes
 
-DataLine CharlistConstructor();
-void AddToCharList(DataLine *, char);
+DataLine DataLineConstructor();
+void AddCharToDataLine(DataLine *, char);
 void CharlistDtor(DataLine *);
-DataLineList LinesConstructor();
+DataLineList DataLineListConstructor();
 void AddToDataLineList(DataLineList *, DataLine);
 void FreeDataLineList(DataLineList *);
 
@@ -74,12 +74,13 @@ int main(int argc, char *argv[]) {
         printf("Invalid arguments");
         return 1;
     }
-    DataLineList lineList = LinesConstructor();
+    DataLineList lineList = DataLineListConstructor();
 
     int error = GetDataFromFile(&lineList, argv[1]);
     (void) error;
 
-    for (int i= 0; i<lineList.currentRow; i++){ //checking if struct is correctly loaded will be deleted later on
+    // DEBUG TEMP CODE
+    for (int i= 0; i<lineList.currentRow; i++){
         printf("%c", lineList.dataLines[i].keyword);
         for (int j= 0; lineList.dataLines[i].data[j]!='\0';j++){
 
@@ -87,18 +88,19 @@ int main(int argc, char *argv[]) {
         }
         printf("\n");
     }
+    // ==================
     
     return 0;
 }
 
 // ================= DYNAMIC STRUCTURE MANIPULATION =================
 
-DataLine CharlistConstructor() {
+DataLine DataLineConstructor() {
     DataLine list = {.data = NULL, .maxLength = DEFAULT_ALLOCATION_SIZE, .currentLength = 0, .keyword = '\0'};
     list.data = malloc(list.maxLength * sizeof(char));
     return list;
 }
-void AddToCharList(DataLine *list, char c) {
+void AddCharToDataLine(DataLine *list, char c) {
     if (list->currentLength == list->maxLength) {
         char *tmp = realloc(list->data, sizeof(char) * 2* list->maxLength);
         if (tmp == NULL){
@@ -119,7 +121,7 @@ void CharlistDtor(DataLine *list) {
     list->data = NULL;
 }
 
-DataLineList LinesConstructor() {
+DataLineList DataLineListConstructor() {
     DataLineList list = {.dataLines = NULL, .currentRow = 0, .maxRows = DEFAULT_ALLOCATION_SIZE};
     list.dataLines = malloc(list.maxRows * sizeof(DataLine));
     return list;
@@ -152,7 +154,7 @@ int GetDataFromFile(DataLineList *dataLineList, char *fileName) {
     FILE *file = fopen(fileName, "r");
     if (file == NULL) return 1;
 
-    DataLine charList = CharlistConstructor();
+    DataLine charList = DataLineConstructor();
     
 
     int currentIndex = 0;
@@ -162,7 +164,7 @@ int GetDataFromFile(DataLineList *dataLineList, char *fileName) {
 
         // Adding non-keyword char to char list
         if (charList.keyword != '\0' && currentChar != '\n' && currentIndex != 1) {
-            AddToCharList(&charList, currentChar);
+            AddCharToDataLine(&charList, currentChar);
         }
 
         // Getting Keyword
@@ -177,9 +179,9 @@ int GetDataFromFile(DataLineList *dataLineList, char *fileName) {
 
         // At the end of line
         if (currentChar == '\n') {
-            AddToCharList(&charList, '\0'); // To end the string
+            AddCharToDataLine(&charList, '\0'); // To end the string
             AddToDataLineList(dataLineList, charList);
-            charList = CharlistConstructor();
+            charList = DataLineConstructor();
             currentIndex = -1; // bellow is incrementation
         }
         
