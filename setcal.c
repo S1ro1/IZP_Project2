@@ -1,3 +1,14 @@
+/* TODO
+- load sets, display set - Dosilox
+- load relations, display relation - Pepa
+- command struct - Miski
+- funcs over sets - Siro
+- funcs over relations - Jakub
+
+- free all - Siro + Dosilox
+*/
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -7,11 +18,10 @@
 #define MAX_STRING_LENGTH 31
 #define DEFAULT_ALLOCATION_SIZE 8
 
-#define UniversumKeyword "U"
-#define RelationKeyword "R"
-#define CommandKeyword "C"
-#define SetKeyword "S"
-
+#define UniversumKeyword 'U'
+#define SetKeyword 'S'
+#define RelationKeyword 'R'
+#define CommandKeyword 'C'
 
 
 // Structs
@@ -19,23 +29,33 @@ typedef struct {
     char *data;
     int currentLength;
     int maxLength;
+    int rowIndex;
     char keyword;
 } DataLine;
 
 typedef struct {
     DataLine *dataLines;
-    int currentRow;
+    int rowCount;
     int maxRows;
-} DataLineList;
+} LineList;
 
 typedef struct {
     char **items;
     int itemCount;
+    int maxItemCount;
 } Universum;
+
+typedef struct {
+    char *keyword;
+    int A;
+    int B;
+    int C;
+} Command;
 
 typedef struct {
     int *items;
     int itemCount;
+    int lineNumber;
 } Set;
 
 typedef struct {
@@ -46,66 +66,167 @@ typedef struct {
 typedef struct {
     Pair *pairs;
     int pairCount;
+    int LineNumber;
 } Relation;
 
+
 // Prototypes
-
 DataLine DataLineConstructor();
-void AddCharToDataLine(DataLine *, char);
-void CharlistDtor(DataLine *);
-DataLineList DataLineListConstructor();
-void AddToDataLineList(DataLineList *, DataLine);
-void FreeDataLineList(DataLineList *);
-
-Universum UniversumConstructor();
-int InitUniversum(Universum *, char *);
-int ParseItem(char *);
-int GetDataFromFile(DataLineList *, char *);
-
-
+int AddCharToDataLine(DataLine *, char);
+int DataLineDtor(DataLine *);
+LineList LineListConstructor();
+int AddToLineList(LineList *, DataLine);
+int FreeLineList(LineList *);
+int InitUniversum(Universum *);
+int ReallocUniversum(Universum *, int);
+int GetDataFromFile(LineList *, char *);
+int PopulateUniversum(DataLine *, Universum *);
+int AddUniversumItem(Universum *, char *);
+int IsKeyword(char *);
+int GetItemIndex(Universum *);
+void FreeUniversum(Universum *);
+int ResolveCommand(Command, Set *, Relation *, Universum);
+int UniversumDuplicateCheck(Universum *);
 
 // --------------------------------------
 
 int main(int argc, char *argv[]) {
-    (void) argc;
-    (void) argv;
 
+    Set *sets = NULL;
+    Relation *relations = NULL;
+    
     if (argc != 2) {
         printf("Invalid arguments");
         return 1;
     }
-    DataLineList lineList = DataLineListConstructor();
-
+    LineList lineList = LineListConstructor();
+    Universum u = {.items = NULL, .itemCount = 0, .maxItemCount = DEFAULT_ALLOCATION_SIZE};
+    int universumResult = InitUniversum(&u);
+    if (universumResult != 0) {
+        return 1;
+    }
+    
     int error = GetDataFromFile(&lineList, argv[1]);
     (void) error;
 
-    // DEBUG TEMP CODE
-    for (int i= 0; i<lineList.currentRow; i++){
-        printf("%c", lineList.dataLines[i].keyword);
-        for (int j= 0; lineList.dataLines[i].data[j]!='\0';j++){
+    int universumResult = PopulateUniversum(&lineList.dataLines[0], &u) || UniversumDuplicateCheck(&u);
 
-            printf("%c", lineList.dataLines[i].data[j]);
-        }
-        printf("\n");
+    if (universumResult == 1) {
+        fprintf(stderr,"Failed to load universum");
+        return 1;
     }
-    // ==================
+
+
+    Command command = {.keyword = NULL, .A = -1, .B = -1, .C = -1};
+    for (int i = 1; i < lineList.rowCount; i++) {
+        DataLine currentLine = lineList.dataLines[i];
+
+        switch (currentLine.keyword) {
+            case SetKeyword:
+            /*  TODO:
+                SetCtor()
+                PopulateSet()
+                AddToSets()
+            */    
+                break;
+            case RelationKeyword:
+            /*  TODO:
+                RelationCtor()
+                PopulateRelation()
+                AddToRelations()
+            */
+                break;
+            case CommandKeyword:
+                /*  TODO:
+                command = GetCommand(...);
+                */
+                break;
+            default:
+                fprintf(stderr, "Wrong keyword");
+                return 1;
+        }
+    }
+    ResolveCommand(command, sets, relations, u);
+    return 0;
+}
+
+int ResolveCommand(Command command, Set *sets, Relation *relations, Universum universum) {
+    char *keyword = command.keyword;
+    if (strcmp("empty", keyword) == 0) {
+        
+    }
+    else if (strcmp("card", keyword) == 0) {
+        
+    }
+    else if (strcmp("complement", keyword) == 0) {
+        
+    }
+    else if (strcmp("union", keyword) == 0) {
+        
+    }
+    else if (strcmp("intersect", keyword) == 0) {
+        
+    }
+    else if (strcmp("minus", keyword) == 0) {
+        
+    }
+    else if (strcmp("subseteq", keyword) == 0) {
+        
+    }
+    else if (strcmp("subset", keyword) == 0) {
+        
+    }
+    else if (strcmp("equals", keyword) == 0) {
+        
+    }
+    else if (strcmp("reflexive", keyword) == 0) {
+        
+    }
+    else if (strcmp("symmetric", keyword) == 0) {
+        
+    }
+    else if (strcmp("antisymmetric", keyword) == 0) {
+        
+    }
+    else if (strcmp("transitive", keyword) == 0) {
+        
+    }
+    else if (strcmp("function", keyword) == 0) {
+        
+    }
+    else if (strcmp("domain", keyword) == 0) {
+        
+    }
+    else if (strcmp("codomain", keyword) == 0) {
+        
+    }
+    else if (strcmp("injective", keyword) == 0) {
     
+    }
+    else if (strcmp("surjective", keyword) == 0) {
+        
+    }
+    else if (strcmp("bijective", keyword) == 0) {
+        
+    } else {
+        return 1;
+    }
     return 0;
 }
 
 // ================= DYNAMIC STRUCTURE MANIPULATION =================
 
 DataLine DataLineConstructor() {
-    DataLine list = {.data = NULL, .maxLength = DEFAULT_ALLOCATION_SIZE, .currentLength = 0, .keyword = '\0'};
+    DataLine list = {.data = NULL, .maxLength = DEFAULT_ALLOCATION_SIZE, .currentLength = 0, .rowIndex = 0, .keyword = '\0'};
     list.data = malloc(list.maxLength * sizeof(char));
     return list;
 }
-void AddCharToDataLine(DataLine *list, char c) {
+int AddCharToDataLine(DataLine *list, char c) {
     if (list->currentLength == list->maxLength) {
         char *tmp = realloc(list->data, sizeof(char) * 2* list->maxLength);
         if (tmp == NULL){
-            printf("wrong allocation %d", list->maxLength); //test print
-            return;
+            fprintf(stderr, "Allocation unsuccessful");
+            return 1;
         }  // TODO: fix return value
         list->data = tmp;
         list->maxLength *= 2;
@@ -113,76 +234,158 @@ void AddCharToDataLine(DataLine *list, char c) {
 
     list->data[list->currentLength] = c;
     list->currentLength++;
+    return 0;
 }
 
-void CharlistDtor(DataLine *list) {
-    if (list->data == NULL) return;
+int DataLineDtor(DataLine *list) {
+    if (list->data == NULL) { 
+        fprintf(stderr, "Wrong pointer");
+        return 1;
+    }
     free(list->data);
     list->data = NULL;
+    return 0;
 }
 
-DataLineList DataLineListConstructor() {
-    DataLineList list = {.dataLines = NULL, .currentRow = 0, .maxRows = DEFAULT_ALLOCATION_SIZE};
+LineList LineListConstructor() {
+    LineList list = {.dataLines = NULL, .rowCount = 0, .maxRows = DEFAULT_ALLOCATION_SIZE};
     list.dataLines = malloc(list.maxRows * sizeof(DataLine));
     return list;
 }
 
-void AddToDataLineList(DataLineList *lines, DataLine line) {
-    if (lines->currentRow == lines->maxRows) {
+int AddToLineList(LineList *lines, DataLine line) {
+    if (lines->rowCount == lines->maxRows) {
         DataLine *tmp= realloc(lines->dataLines, sizeof(DataLine) * 2* lines->maxRows);
         if (tmp == NULL) {
-            printf("wrong allocation %d", lines->maxRows); //test print
-            return;
-            }// TODO: fix return value
+            fprintf(stderr, "Allocation unsuccessful");
+            return 1;
+        }
         lines->dataLines= tmp;
         lines->maxRows *= 2;
     }
 
-    lines->dataLines[lines->currentRow] = line;
-    lines->currentRow++;
+    lines->dataLines[lines->rowCount] = line;
+    lines->rowCount++;
+    return 0;
 }
 
-void FreeDataLineList(DataLineList *lines) {
-    if (lines->dataLines == NULL) return;
-    free(lines->dataLines);
-    lines->dataLines = NULL;
-}
-
-// ==============================================================
-
-int GetDataFromFile(DataLineList *dataLineList, char *fileName) {
-    FILE *file = fopen(fileName, "r");
-    if (file == NULL) return 1;
-
-    DataLine charList = DataLineConstructor();
+int FreeLineList(LineList *lines) {
+    if (lines->dataLines == NULL){
+        fprintf(stderr, "Wrong pointer");
+        return 1;
+    }
     
+    free(lines->dataLines);
+    lines->dataLines = NULL;\
+    return 0;
+}
 
+int ReallocUniversum(Universum *universum, int newSize) {
+    if (universum->itemCount == 0) {
+        universum->items = (char **)malloc(DEFAULT_ALLOCATION_SIZE);
+        if (universum->items == NULL) {
+            fprintf(stderr, "Allocation unsuccessful");
+            return 1;
+        }
+    } else {
+        char **tmp = realloc(universum->items, universum->itemCount + newSize);
+
+        if (tmp == NULL) {
+            fprintf(stderr, "Allocation unsuccessful");
+            return 1;
+        }
+        universum->items = tmp;
+    }
+
+    // columns allocation
+    for (int i = universum->itemCount; i < universum->maxItemCount; i++) {
+        universum->items[i] = (char *)malloc(MAX_STRING_LENGTH);
+        if (universum->items[i] == NULL){
+            fprintf(stderr, "Allocation unsuccessful");
+            return 1;
+        }
+    }
+    return 0;
+}
+
+void FreeUniversum(Universum *universum) {
+    for (int i = 0; i < universum->maxItemCount; i++) {
+        free(universum->items[i]);
+    }
+    free(universum->items);
+    universum->items = NULL;
+    universum->maxItemCount = 0;
+    universum->itemCount = 0;
+}
+
+    // ==============================================================
+
+int GetItemIndex(Universum *universum, char *item) {
+    int index = -1;
+
+    for (int i = 0; i < universum->itemCount; i++) {
+        if (strcmp(universum->items[i], item) == 0) {
+            index = i;
+            break;
+        }
+    }
+
+    return index;
+}
+
+//duplicate check in universum
+int UniversumDuplicateCheck(Universum *universum){
+    for (int i = 0; i < universum->itemCount; i++) {
+        char currentItem = universum->items[i];
+
+        for (int j = 0; j < universum->itemCount; j++) {
+            if (j == i) continue;
+            char comparingItem = universum->items[j];
+
+            if (strcmp(currentItem, comparingItem) == 0) return 1;
+        }
+    }
+    return 0;
+}
+
+int GetDataFromFile(LineList *LineList, char *fileName) {
+    FILE *file = fopen(fileName, "r");
+    if (file == NULL) {
+        fprintf(stderr, "Wrong file path");
+    }
+
+    DataLine line = DataLineConstructor();
+    
     int currentIndex = 0;
     int charInt = fgetc(file);
+    int currentRow = 0;
     while(charInt != EOF) { 
         char currentChar = (char)charInt;
 
         // Adding non-keyword char to char list
-        if (charList.keyword != '\0' && currentChar != '\n' && currentIndex != 1) {
-            AddCharToDataLine(&charList, currentChar);
+        if (line.keyword != '\0' && currentChar != '\n' && currentIndex != 1) {
+            AddCharToDataLine(&line, currentChar);
         }
 
         // Getting Keyword
-        if (charList.keyword == '\0') {
-            charList.keyword = currentChar;
+        if (line.keyword == '\0') {
+            line.keyword = currentChar;
         }
 
         // Keyword is not single char
-        if (charList.keyword != '\0' && currentIndex == 1 && currentChar != ' ' && currentChar != '\n') {
+        if (line.keyword != '\0' && currentIndex == 1 && currentChar != ' ' && currentChar != '\n') {
+            fprintf(stderr, "Keyword is not a single char");
             return 1;
         }
 
         // At the end of line
         if (currentChar == '\n') {
-            AddCharToDataLine(&charList, '\0'); // To end the string
-            AddToDataLineList(dataLineList, charList);
-            charList = DataLineConstructor();
-            currentIndex = -1; // bellow is incrementation
+            AddCharToDataLine(&line, '\0'); // To end the string
+            line.rowIndex = currentRow;
+            AddToLineList(LineList, line);
+            line = DataLineConstructor();
+            currentIndex = -1; // below is incrementation
+            currentRow++;
         }
         
         
@@ -193,86 +396,73 @@ int GetDataFromFile(DataLineList *dataLineList, char *fileName) {
     
     fclose(file);
     // Empty file
-    if (dataLineList->currentRow == 0) {
-        return 2;
+    if (LineList->rowCount == 0) {
+        fprintf(stderr, "The file is empty");
+        return 1;
     } 
 
     return 0;
 }
 
-
-
-
-
-
-
-/*
-
-
-
-Universum UniversumConstructor() {
-    Universum u = {.items = NULL, .itemCount = DEFAULT_ALLOCATION_SIZE};
-    u.items = malloc(DEFAULT_ALLOCATION_SIZE * MAX_STRING_LENGTH * sizeof(char));
-    return u;
+int InitUniversum(Universum *universum) {
+    return ReallocUniversum(universum, 0);
 }
 
+int PopulateUniversum(DataLine *source, Universum *universum) {
+    if (source->keyword != UniversumKeyword) return 1;
 
+    char *data = source->data;
 
-int InitUnversum(Universum *universum, char *filePath) {
-    FILE *file = fopen(filePath, "r");
-
-    if (file == NULL) {
-        return 2;
-    }
-    if ((char)fgetc(file) != UniversumKeyword) return 1;
+    int wordLength = 0;
+    char tmpWord[31] = {'\0'};
     
-    int currentWord = 0;
-    int currentCharNumber;
-    char currentChar;
-    int itemIndex = 0;
-    char item[MAX_STRING_LENGTH] = {'\0'};
-    do {
-        currentCharNumber = fgetc(file);
-        currentChar = (char)currentCharNumber;
-
-        if(itemIndex > MAX_STRING_LENGTH - 1) return 1;
-
-        if (currentChar != " ") {
-            item[itemIndex] = currentChar;
-            itemIndex++;
-        } else {
-            itemIndex = 0;
-            
-            if (IsKeyword(item)) {
-                return 1; 
-            } else {
-                if (universum->size < currentWord) {
-                    universum->size *= 2;
-                    realloc(universum->items, universum->size * MAX_STRING_LENGTH * sizeof(char));
-                }
-                *universum->items[currentWord] = item;
+    for (int i = 0; data[i] != '\0'; i++) {
+        char currentChar = data[i];
+        if (wordLength > 30) return 1;
+        if (currentChar != ' ') {
+            if (!isalpha(currentChar)){
+                fprintf(stderr, "Universum element contains unsupported char!");
+                return 1;
             }
-            char item[MAX_STRING_LENGTH] = {'\0'};
+            tmpWord[wordLength] = currentChar;
+            wordLength++;
+        } else {
+            if (wordLength == 0) {
+                fprintf(stderr, "Universum element separated by 2 spaces");
+            return 1;
+            }
+            if (IsKeyword(tmpWord)) {
+                fprintf(stderr, "Universum element is a forbidden word");
+            }
+            wordLength = 0;
+
+            AddUniversumItem(universum, tmpWord);
         }
-
-    } while(currentChar != '\n');
-
+    }
     return 0;
-    
 }
 
+int AddUniversumItem(Universum *universum, char* word) {
+    // Realloc checking 
+    if (universum->itemCount == universum->maxItemCount) {
+        universum->maxItemCount *= 2;
+        ReallocUniversum(universum, universum->maxItemCount);
+    }
+    strcpy(universum->items[universum->itemCount], word);
+    universum->itemCount++;
+    return 0;
+}
 
-bool IsKeyword(char *element) {
+int IsKeyword(char *element) {
 
-    char keywords[] = {"true", "false", "empty", "card", "complement", "union",
+    char *keywords[] = {"true", "false", "empty", "card", "complement", "union",
     "intersect", "minus", "subseteq", "subset", "equals", "reflexive", "symmetric", "antisymmetric", "transitive", "function", "domain",
     "codomain", "injective", "surjective", "bijective"};
 
     for (int i = 0; i < 25; i++) {
         if (strcmp(keywords[i], element) == 0) {
-            return true;
+            return 1;
         }
     }
-    return false;
+    return 0;
 }
-*/
