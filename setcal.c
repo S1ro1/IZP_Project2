@@ -83,17 +83,18 @@ int GetDataFromFile(LineList *, char *);
 int PopulateUniversum(DataLine *, Universum *);
 int AddUniversumItem(Universum *, char *);
 int IsKeyword(char *);
-int GetItemIndex(Universum *);
+int GetItemIndex(Universum *, char *);
 void FreeUniversum(Universum *);
 int ResolveCommand(Command, Set *, Relation *, Universum);
 int UniversumDuplicateCheck(Universum *);
+void ClearTempWord(char *);
 
 // --------------------------------------
 
 int main(int argc, char *argv[]) {
 
-    Set *sets = NULL;
-    Relation *relations = NULL;
+    //Set *sets = NULL;
+    //Relation *relations = NULL;
     
     if (argc != 2) {
         printf("Invalid arguments");
@@ -109,7 +110,7 @@ int main(int argc, char *argv[]) {
     int error = GetDataFromFile(&lineList, argv[1]);
     (void) error;
 
-    int universumResult = PopulateUniversum(&lineList.dataLines[0], &u) || UniversumDuplicateCheck(&u);
+    universumResult = PopulateUniversum(&lineList.dataLines[0], &u) || UniversumDuplicateCheck(&u);
 
     if (universumResult == 1) {
         fprintf(stderr,"Failed to load universum");
@@ -117,7 +118,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    Command command = {.keyword = NULL, .A = -1, .B = -1, .C = -1};
+    //Command command = {.keyword = NULL, .A = -1, .B = -1, .C = -1};
     for (int i = 1; i < lineList.rowCount; i++) {
         DataLine currentLine = lineList.dataLines[i];
 
@@ -146,11 +147,11 @@ int main(int argc, char *argv[]) {
                 return 1;
         }
     }
-    ResolveCommand(command, sets, relations, u);
+    //ResolveCommand(command, sets, relations, u);
     return 0;
 }
 
-int ResolveCommand(Command command, Set *sets, Relation *relations, Universum universum) {
+/*int ResolveCommand(Command command, Set *sets, Relation *relations, Universum universum) {
     char *keyword = command.keyword;
     if (strcmp("empty", keyword) == 0) {
         
@@ -212,7 +213,7 @@ int ResolveCommand(Command command, Set *sets, Relation *relations, Universum un
         return 1;
     }
     return 0;
-}
+}*/
 
 // ================= DYNAMIC STRUCTURE MANIPULATION =================
 
@@ -336,11 +337,11 @@ int GetItemIndex(Universum *universum, char *item) {
 //duplicate check in universum
 int UniversumDuplicateCheck(Universum *universum){
     for (int i = 0; i < universum->itemCount; i++) {
-        char currentItem = universum->items[i];
+        char *currentItem = universum->items[i];
 
         for (int j = 0; j < universum->itemCount; j++) {
             if (j == i) continue;
-            char comparingItem = universum->items[j];
+            char *comparingItem = universum->items[j];
 
             if (strcmp(currentItem, comparingItem) == 0) return 1;
         }
@@ -435,8 +436,8 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
                 fprintf(stderr, "Universum element is a forbidden word");
             }
             wordLength = 0;
-
             AddUniversumItem(universum, tmpWord);
+            ClearTempWord(tmpWord);
         }
     }
     return 0;
@@ -459,10 +460,15 @@ int IsKeyword(char *element) {
     "intersect", "minus", "subseteq", "subset", "equals", "reflexive", "symmetric", "antisymmetric", "transitive", "function", "domain",
     "codomain", "injective", "surjective", "bijective"};
 
-    for (int i = 0; i < 25; i++) {
+    for (int i = 0; i < 21; i++) {
         if (strcmp(keywords[i], element) == 0) {
             return 1;
         }
     }
     return 0;
+}
+void ClearTempWord(char *tmpWord) {
+    for (int i = 0; tmpWord[i] !='\0';i++) {
+        tmpWord[i]='\0';
+    }
 }
