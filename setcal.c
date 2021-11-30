@@ -46,7 +46,7 @@ typedef struct {
 } Universum;
 
 typedef struct {
-    char *keyword;
+    char keyword[14]; // 14 => longest command +1
     int A;
     int B;
     int C;
@@ -88,6 +88,8 @@ void FreeUniversum(Universum *);
 int ResolveCommand(Command, Set *, Relation *, Universum);
 int UniversumDuplicateCheck(Universum *);
 void ClearTempWord(char *);
+int GetCommand(char *, Command *);
+int CheckCommandArg(int, char);
 
 // --------------------------------------
 
@@ -118,7 +120,7 @@ int main(int argc, char *argv[]) {
     }
 
 
-    //Command command = {.keyword = NULL, .A = -1, .B = -1, .C = -1};
+    //Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
     for (int i = 1; i < lineList.rowCount; i++) {
         DataLine currentLine = lineList.dataLines[i];
 
@@ -138,10 +140,11 @@ int main(int argc, char *argv[]) {
             */
                 break;
             case CommandKeyword:
-                /*  TODO:
-                command = GetCommand(...);
-                */
+
+                //int CommandResult = GetCommand(currentLine.data, &command);
+                //ResolveCommand(command, sets, relations, u);
                 break;
+
             default:
                 fprintf(stderr, "Wrong keyword");
                 return 1;
@@ -471,4 +474,109 @@ void ClearTempWord(char *tmpWord) {
     for (int i = 0; tmpWord[i] !='\0';i++) {
         tmpWord[i]='\0';
     }
+}
+
+//function check arguments in commands
+int CheckCommandArg(int number, char symbol){
+    if (number >= 100){ //100 * 10 more symbol wanted to be added
+        fprintf(stderr, ("Too long command number argument identifier\n"));
+        return 1;
+    }
+    if (!isdigit(symbol)){
+        fprintf(stderr, "Number identifier contains alpha symbols\n");
+        return 1;
+    }
+    return 0;
+}
+
+//function load command to struct and return 1 if some error appear
+int GetCommand(char line[], Command *command){
+    int SpaceCount = 0;
+    int SpaceIdentifier = false;
+    for(int index_1 = 0, index_2 = 0; line[index_1] != '\0'; index_1++){
+
+        if (line[index_1] == ' '){
+            //check if whether there are 2 spaces in a row
+            if (SpaceIdentifier){
+                fprintf(stderr, "Command contains 2 spaces in row\n");
+                return 1;
+            }
+            SpaceCount++;
+            index_2 = 0;
+            SpaceIdentifier = true;
+            continue;
+        }
+
+        SpaceIdentifier = false; //if symbol is not 'space'
+
+        //populating command->keyword
+        if (SpaceCount == 0){
+            //check if keyword is no longer than 13 + 1 length
+            if (index_2 >= 13){
+                fprintf(stderr, "Incorrect command\n");
+                return 1;
+            }
+
+            command->keyword[index_2] = line[index_1];
+            index_2++;
+        }
+        //add to command->A
+        else if (SpaceCount == 1){
+
+            if (CheckCommandArg(command->A, line[index_1]) == 1) return 1;
+
+            if (command->A == -1){
+                command->A = line[index_1] - '0';
+                index_2 = 10;
+            }
+            else{
+                command->A *= index_2;
+                command->A += (line[index_1] - '0');
+            }
+        }
+        //add to command->B
+        else if (SpaceCount == 2){
+
+            if (CheckCommandArg(command->B, line[index_1]) == 1) return 1;
+
+            if (command->B == -1){
+                command->B = line[index_1] - '0';
+                index_2 = 10;
+            }
+            else{
+                command->B *= index_2;
+                command->B += (line[index_1] - '0');
+            }
+        }
+        //add to command->C
+        else if (SpaceCount == 3){
+
+            if (CheckCommandArg(command->C, line[index_1]) == 1) return 1;
+
+            if (command->C == -1){
+                command->C = line[index_1] - '0';
+                index_2 = 10;
+            }
+            else{
+                command->C *= index_2;
+                command->C += (line[index_1] - '0');
+            }
+        }
+        else if (SpaceCount > 3){
+            fprintf(stderr, "Too many arguments in command line\n");
+            return 1;
+        }
+        //add to command A, B, C if not given
+        else{
+            command->A = -1;
+            command->B = -1;
+            command->C = -1;
+        }
+    }
+    //check if command->keyword is correct
+    if (IsKeyword(command->keyword) == 0){
+        fprintf(stderr, "Wrong command keyword\n");
+        return 1;
+    }
+    return 0;
 }
