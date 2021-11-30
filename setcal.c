@@ -118,8 +118,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"Failed to load universum");
         return 1;
     }
-
-
     //Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
     for (int i = 1; i < lineList.rowCount; i++) {
         DataLine currentLine = lineList.dataLines[i];
@@ -384,6 +382,7 @@ int GetDataFromFile(LineList *LineList, char *fileName) {
 
         // At the end of line
         if (currentChar == '\n') {
+            AddCharToDataLine(&line, currentChar);
             AddCharToDataLine(&line, '\0'); // To end the string
             line.rowIndex = currentRow;
             AddToLineList(LineList, line);
@@ -424,6 +423,10 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
         char currentChar = data[i];
         if (wordLength > 30) return 1;
         if (currentChar != ' ') {
+            if (currentChar == '\n') {
+                AddUniversumItem(universum, tmpWord);
+                break;
+            }
             if (!isalpha(currentChar)){
                 fprintf(stderr, "Universum element contains unsupported char!");
                 return 1;
