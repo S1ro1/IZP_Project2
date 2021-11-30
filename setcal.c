@@ -286,13 +286,13 @@ int FreeLineList(LineList *lines) {
 
 int ReallocUniversum(Universum *universum, int newSize) {
     if (universum->itemCount == 0) {
-        universum->items = (char **)malloc(DEFAULT_ALLOCATION_SIZE);
+        universum->items = (char )malloc(DEFAULT_ALLOCATION_SIZE * sizeof(char *));
         if (universum->items == NULL) {
             fprintf(stderr, "Allocation unsuccessful");
             return 1;
         }
     } else {
-        char **tmp = realloc(universum->items, universum->itemCount + newSize);
+        char tmp = realloc(universum->items, newSize * sizeof(char *));
 
         if (tmp == NULL) {
             fprintf(stderr, "Allocation unsuccessful");
@@ -301,10 +301,10 @@ int ReallocUniversum(Universum *universum, int newSize) {
         universum->items = tmp;
     }
 
-    // columns allocation
+    //columns allocation
     for (int i = universum->itemCount; i < universum->maxItemCount; i++) {
         universum->items[i] = (char *)malloc(MAX_STRING_LENGTH);
-        if (universum->items[i] == NULL){
+        if (universum->items[i] == NULL) {
             fprintf(stderr, "Allocation unsuccessful");
             return 1;
         }
