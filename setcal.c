@@ -67,6 +67,7 @@ typedef struct {
     Pair *pairs;
     int pairCount;
     int LineNumber;
+    int maxSize;
 } Relation;
 
 
@@ -90,6 +91,7 @@ int UniversumDuplicateCheck(Universum *);
 void ClearTempWord(char *);
 int GetCommand(char *, Command *);
 int CheckCommandArg(int, char);
+Relation RelationCtor();
 
 // --------------------------------------
 
@@ -582,4 +584,9 @@ int GetCommand(char line[], Command *command){
         return 1;
     }
     return 0;
+}
+Relation RelationCtor(){
+    Relation relation = {.pairs = NULL, .pairCount = 0, .maxSize = 0, .LineNumber = 0};
+    relation.pairs = malloc(relation.pairCount * sizeof(Pair));
+    return relation;
 }
