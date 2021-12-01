@@ -252,6 +252,8 @@ int GetSetArrIndex(int index, Sets *sets) {
 int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
     char *keyword = command.keyword;
 
+    printf("A is: %d", command.A);
+
     Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
     Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
 
