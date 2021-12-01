@@ -108,7 +108,6 @@ void FreeSet(Set *);
 void* ArrAlloc(void *, size_t, int*, int);
 Relation RelationCtor();
 void DisplayUniversum(Universum);
-<<<<<<< HEAD
 int GetSetArrIndex(int, Sets *);
 
 //funcs over sets
@@ -116,8 +115,6 @@ void IsEmpty(Set);
 void Card(Set);
 void SetUnion(Set, Set, Universum *);
 void SetMinus(Set, Set, Universum *);
-=======
->>>>>>> refs/remotes/origin/main
 
 // --------------------------------------
 
@@ -147,12 +144,8 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     DisplayUniversum(u);
-<<<<<<< HEAD
-    //Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
-=======
     //int CommandResult = 0;
     Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
->>>>>>> refs/remotes/origin/main
     for (int i = 1; i < lineList.rowCount; i++) {
         Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
         DataLine currentLine = lineList.dataLines[i];
@@ -183,15 +176,9 @@ int main(int argc, char *argv[]) {
             */
                 break;
             case CommandKeyword:
-<<<<<<< HEAD
                 CommandResult = GetCommand(currentLine.data, &command);
                 if (CommandResult == 1) return 1;
                 ResolveCommand(command, &setCollection, u);
-=======
-
-                //CommandResult = GetCommand(currentLine.data, &command);
-                //ResolveCommand(command, sets, relations, u);
->>>>>>> refs/remotes/origin/main
                 break;
 
             default:
@@ -773,10 +760,6 @@ int CheckCommandArg(int number, char symbol){
 int GetCommand(char line[], Command *command){
     int SpaceCount = 0;
     int SpaceIdentifier = false;
-<<<<<<< HEAD
-    for(int index_1 = 0, index_2 = 0; line[index_1] != '\0'; index_1++){
-
-=======
     strcpy(command->keyword, "'\0'"); //reset command
     for(int index_1 = 0, index_2 = 0; line[index_1] != '\n'; index_1++){
 >>>>>>> refs/remotes/origin/main
