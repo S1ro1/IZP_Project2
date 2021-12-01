@@ -137,7 +137,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     DisplayUniversum(u);
-    //int CommandResult = 0;
+    int CommandResult = 0;
     Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
     for (int i = 1; i < lineList.rowCount; i++) {
         DataLine currentLine = lineList.dataLines[i];
@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
                 break;
             case CommandKeyword:
 
-                //CommandResult = GetCommand(currentLine.data, &command);
+                CommandResult = GetCommand(currentLine.data, &command);
                 //ResolveCommand(command, sets, relations, u);
                 break;
 
@@ -678,7 +678,7 @@ int CheckCommandArg(int number, char symbol){
 int GetCommand(char line[], Command *command){
     int SpaceCount = 0;
     int SpaceIdentifier = false;
-    strcpy(command->keyword, "'\0'"); //reset command
+    memset(command->keyword, 0, 14); //reset command
     for(int index_1 = 0, index_2 = 0; line[index_1] != '\n'; index_1++){
         if (line[index_1] == ' '){
             //check if whether there are 2 spaces in a row
