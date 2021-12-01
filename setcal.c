@@ -820,7 +820,10 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
                     fprintf(stderr, "Universum element is a forbidden word");
                     return 1;
                 } else {
-                    AddUniversumItem(universum, tmpWord);
+                    if (strlen(tmpWord) != 0){
+                        AddUniversumItem(universum, tmpWord);
+                    }
+                    
                     break;
                 }
             }
