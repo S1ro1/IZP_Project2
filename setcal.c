@@ -107,6 +107,7 @@ void DisplaySet(Set, Universum);
 void FreeSet(Set *);
 void* ArrAlloc(void *, size_t, int*, int);
 Relation RelationCtor();
+void DisplayUniversum(Universum);
 int GetSetArrIndex(int, Sets *);
 
 //funcs over sets
@@ -142,6 +143,8 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"Failed to load universum");
         return 1;
     }
+    DisplayUniversum(u);
+    //Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
     for (int i = 1; i < lineList.rowCount; i++) {
         Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
         DataLine currentLine = lineList.dataLines[i];
@@ -495,6 +498,18 @@ void FreeUniversum(Universum *universum) {
 }
 
 // ==============================================================
+
+void DisplayUniversum(Universum universum) {
+    printf("U ");
+    for (int i = 0; i < universum.itemCount; i++) {
+        printf("%s", universum.items[i]);
+
+        if (i < universum.itemCount - 1) {
+            printf(" ");
+        }
+    }
+    printf("\n");
+}
 
 int PopulateSet(DataLine *line, Set *set, Universum *universum) {
     // Values init
