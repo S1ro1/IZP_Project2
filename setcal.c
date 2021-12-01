@@ -115,6 +115,8 @@ void IsEmpty(Set);
 void Card(Set);
 void SetUnion(Set, Set, Universum *);
 void SetMinus(Set, Set, Universum *);
+void SetIntersect(Set, Set, Universum *);
+void SetEquals(Set, Set);
 
 // --------------------------------------
 
@@ -201,6 +203,21 @@ void Card(Set set) {
     printf("%d\n", set.itemCount);
 }
 
+void SetEquals(Set a, Set b) {
+    if (a.itemCount != b.itemCount) {
+        printf("false\n");
+        return;
+    } else {
+        for (int i = 0; i < a.itemCount; i++) {
+            if (a.items[i] != b.items[i]) {
+                printf("false\n");
+                return;
+            }
+        }
+        printf("true\n");
+    }
+}
+
 void SetsUnion(Set a, Set b, Universum *u) {
     int found = 0;
     
@@ -243,6 +260,25 @@ void SetMinus(Set a, Set b, Universum *u) {
     DisplaySet(s, *u);
 }
 
+void SetIntersect(Set a, Set b, Universum *u) {
+
+    Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = -1};
+    SetConstructor(&s);
+
+    for (int i = 0; i < a.itemCount; i++) {
+        int found = 0;
+        for (int j = 0; j < b.itemCount; j++) {
+            if (a.items[i] == b.items[j]) {
+                found = 1;
+            }
+        }
+        if (found == 1) {
+            AddToSet(&s, a.items[i]);
+        }
+    }
+    DisplaySet(s, *u);
+}
+
 int GetSetArrIndex(int index, Sets *sets) {
     for (int i = 0; i < sets->setCount; i++) {
         if (sets->sets[i].lineNumber == index) {
@@ -271,7 +307,7 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
         SetsUnion(A, B, &universum);
     }
     else if (strcmp("intersect", keyword) == 0) {
-        ;
+        SetIntersect(A, B, &universum);
     }
     else if (strcmp("minus", keyword) == 0) {
         SetMinus(A, B, &universum);
@@ -283,7 +319,7 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
         ;
     }
     else if (strcmp("equals", keyword) == 0) {
-        ;
+        SetEquals(A, B);
     }
     else if (strcmp("reflexive", keyword) == 0) {
         ;
