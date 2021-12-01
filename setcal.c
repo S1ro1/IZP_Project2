@@ -110,7 +110,10 @@ Relation RelationCtor();
 int GetSetArrIndex(int, Sets *);
 
 //funcs over sets
-void IsEmpty(Set *);
+void IsEmpty(Set);
+void Card(Set);
+void SetUnion(Set, Set, Universum *);
+void SetMinus(Set, Set, Universum *);
 
 // --------------------------------------
 
@@ -144,20 +147,21 @@ int main(int argc, char *argv[]) {
         DataLine currentLine = lineList.dataLines[i];
         int CommandResult = 0;
 
+        Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = currentLine.rowIndex};
+
         switch (currentLine.keyword) {
             case SetKeyword: {
                 int result = 0;
-
-                Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = currentLine.rowIndex};
 
                 result = 
                     SetConstructor(&s) ||
                     PopulateSet(&currentLine, &s, &u) ||
                     AddToSets(&setCollection, s);
-
-                if (result != 0) return result;
                 DisplaySet(s, u);
+                if (result != 0) return result;
+                
                 break;
+
             }
                 
             case RelationKeyword:
@@ -168,7 +172,6 @@ int main(int argc, char *argv[]) {
             */
                 break;
             case CommandKeyword:
-
                 CommandResult = GetCommand(currentLine.data, &command);
                 if (CommandResult == 1) return 1;
                 ResolveCommand(command, &setCollection, u);
@@ -183,38 +186,57 @@ int main(int argc, char *argv[]) {
     return 0;
 }
 
-void IsEmpty(Set *set) {
-    if (set->itemCount == 0) {
+void IsEmpty(Set set) {
+    if (set.itemCount == 0) {
         printf("true\n");
     } else {
         printf("false\n");
     }
 }
 
-void Card(Set *set) {
-    printf("%d\n", set->itemCount);
+void Card(Set set) {
+    printf("%d\n", set.itemCount);
 }
 
-void SetsUnion(Set *a, Set *b, Universum *u) {
+void SetsUnion(Set a, Set b, Universum *u) {
     int found = 0;
     
     Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = -1};
     SetConstructor(&s);
-    for (int i = 0; i < a->itemCount; i++){
-        AddToSet(&s, a->items[i]);
+    for (int i = 0; i < a.itemCount; i++){
+        AddToSet(&s, a.items[i]);
     }
-    for (int index_1 = 0; index_1 < b->itemCount; index_1++) {
+    for (int index_1 = 0; index_1 < b.itemCount; index_1++) {
         found = 0;
         for (int index_2 = 0; index_2 < s.itemCount; index_2++) {
-            if (b->items[index_1] == s.items[index_2]) {
+            if (b.items[index_1] == s.items[index_2]) {
                 found = 1;
             }
         }
         if (found == 0) {
-            AddToSet(&s, b->items[index_1]);
+            AddToSet(&s, b.items[index_1]);
         }
     }
 
+    DisplaySet(s, *u);
+}
+
+void SetMinus(Set a, Set b, Universum *u) {
+
+    Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = -1};
+    SetConstructor(&s);
+    
+    for (int index_1 = 0; index_1 < a.itemCount; index_1++) {
+        int found = 0;
+        for (int index_2 = 0; index_2 < b.itemCount; index_2++) {
+            if (b.items[index_2] == a.items[index_1]) {
+                found = 1;
+            }
+        }
+        if (found == 0) {
+            AddToSet(&s, b.items[index_1]);
+        }
+    }
     DisplaySet(s, *u);
 }
 
@@ -229,21 +251,21 @@ int GetSetArrIndex(int index, Sets *sets) {
 
 int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
     char *keyword = command.keyword;
-    
+
     Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
     Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
 
     if (strcmp("empty", keyword) == 0) {
-        IsEmpty(&A);   
+        IsEmpty(A);   
     }
     else if (strcmp("card", keyword) == 0) {
-        Card(&A);
+        Card(A);
     }
     else if (strcmp("complement", keyword) == 0) {
         ;
     }
     else if (strcmp("union", keyword) == 0) {
-        SetsUnion(&A, &B, &universum);
+        SetsUnion(A, B, &universum);
     }
     else if (strcmp("intersect", keyword) == 0) {
         ;
@@ -289,7 +311,7 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
     }
     else if (strcmp("bijective", keyword) == 0) {
         ;
-    } else {
+    } else {    
         return 1;
     }
     return 0;
@@ -531,16 +553,16 @@ int IsSetUnique(Set *set) {
 }
 
 void DisplaySet(Set set, Universum universum) {
-    printf("{ ");
+    printf("S ");
     for (int i = 0; i < set.itemCount; i++) {
         int currentItemId = set.items[i];
         printf("%s", universum.items[currentItemId]);
 
         if (i < set.itemCount - 1) {
-            printf(", ");
+            printf(" ");
         }
     }
-    printf(" }\n");
+    printf("\n");
 }
 
 int GetItemIndex(Universum *universum, char *item) {
@@ -707,10 +729,12 @@ int CheckCommandArg(int number, char symbol){
         fprintf(stderr, ("Too long command number argument identifier\n"));
         return 1;
     }
+    (void) symbol;
+    /*
     if (!isdigit(symbol)){
         fprintf(stderr, "Number identifier contains alpha symbols\n");
         return 1;
-    }
+    }*/
     return 0;
 }
 //endregion
@@ -718,7 +742,6 @@ int CheckCommandArg(int number, char symbol){
 int GetCommand(char line[], Command *command){
     int SpaceCount = 0;
     int SpaceIdentifier = false;
-    strcpy(command->keyword, "'\0'"); //reset command
     for(int index_1 = 0, index_2 = 0; line[index_1] != '\0'; index_1++){
 
         if (line[index_1] == ' '){
