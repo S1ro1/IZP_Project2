@@ -116,7 +116,9 @@ void Card(Set);
 void SetUnion(Set, Set, Universum *);
 void SetMinus(Set, Set, Universum *);
 void SetIntersect(Set, Set, Universum *);
-void SetEquals(Set, Set);
+bool SetEquals(Set, Set);
+void IsSubset(Set, Set);
+void IsSubsetEq(Set, Set);
 
 // --------------------------------------
 
@@ -224,23 +226,31 @@ void Card(Set set) {
     printf("%d\n", set.itemCount);
 }
 
-void SetEquals(Set a, Set b) {
+bool SetEquals(Set a, Set b) {
     if (a.itemCount != b.itemCount) {
         printf("false\n");
-        return;
-    } else {
-        for (int i = 0; i < a.itemCount; i++) {
-            if (a.items[i] != b.items[i]) {
-                printf("false\n");
-                return;
+        return 0;
+    }
+    bool found = false;
+
+    for (int i = 0; i < a.itemCount; i++) {
+        found = false;
+        for (int j = 0; j < b.itemCount; j++) {
+            if (a.items[i] == b.items[j]) {
+                found = true;
             }
         }
-        printf("true\n");
+        if (found == false) {
+            printf("false\n");
+            return false;
+        }
     }
+    printf("true\n");
+    return true;
 }
 
 void SetsUnion(Set a, Set b, Universum *u) {
-    int found = 0;
+    bool found = false;
     
     Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = -1};
     SetConstructor(&s);
@@ -248,13 +258,13 @@ void SetsUnion(Set a, Set b, Universum *u) {
         AddToSet(&s, a.items[i]);
     }
     for (int index_1 = 0; index_1 < b.itemCount; index_1++) {
-        found = 0;
+        found = false;
         for (int index_2 = 0; index_2 < s.itemCount; index_2++) {
             if (b.items[index_1] == s.items[index_2]) {
-                found = 1;
+                found = true;
             }
         }
-        if (found == 0) {
+        if (found == false) {
             AddToSet(&s, b.items[index_1]);
         }
     }
@@ -268,13 +278,13 @@ void SetMinus(Set a, Set b, Universum *u) {
     SetConstructor(&s);
 
     for (int i = 0; i < a.itemCount; i++) {
-        int found = 0;
+        bool found = false;
         for (int j = 0; j < b.itemCount; j++) {
             if (a.items[i] == b.items[j]) {
-                found = 1;
+                found = true;
             }
         }
-        if (found == 0) {
+        if (found == false) {
             AddToSet(&s, a.items[i]);
         }
     }
@@ -287,17 +297,51 @@ void SetIntersect(Set a, Set b, Universum *u) {
     SetConstructor(&s);
 
     for (int i = 0; i < a.itemCount; i++) {
-        int found = 0;
+        bool found = false;
         for (int j = 0; j < b.itemCount; j++) {
             if (a.items[i] == b.items[j]) {
-                found = 1;
+                found = true;
             }
         }
-        if (found == 1) {
+        if (found == true) {
             AddToSet(&s, a.items[i]);
         }
     }
     DisplaySet(s, *u);
+}
+
+void IsSubset(Set a, Set b) {
+    int DuplCount = 0;
+    for (int i = 0; i < a.itemCount; i++) {
+        for (int j = 0; j < b.itemCount; j++) {
+            if (a.items[i] == b.items[j]) {
+                DuplCount++;
+                break;
+            }
+        }
+    }
+    if (DuplCount == a.itemCount && !(SetEquals(a, b))) {
+        printf("true\n");
+    } else {
+        printf("false\n");
+    }
+}
+
+void IsSubsetEq(Set a, Set b) {
+    int DuplCount = 0;
+    for (int i = 0; i < a.itemCount; i++) {
+        for (int j = 0; j < b.itemCount; j++) {
+            if (a.items[i] == b.items[j]) {
+                DuplCount++;
+                break;
+            }
+        }
+    }
+    if (DuplCount == a.itemCount) {
+        printf("true\n");
+    } else {
+        printf("false\n");
+    }
 }
 
 int GetSetArrIndex(int index, Sets *sets) {
@@ -334,10 +378,10 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
         SetMinus(A, B, &universum);
     }
     else if (strcmp("subseteq", keyword) == 0) {
-        ;
+        IsSubset(A, B);
     }
     else if (strcmp("subset", keyword) == 0) {
-        ;
+        IsSubset(A, B);
     }
     else if (strcmp("equals", keyword) == 0) {
         SetEquals(A, B);
