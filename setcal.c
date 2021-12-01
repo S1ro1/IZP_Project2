@@ -150,7 +150,7 @@ int main(int argc, char *argv[]) {
         DataLine currentLine = lineList.dataLines[i];
         int CommandResult = 0;
 
-        Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = currentLine.rowIndex};
+        Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = currentLine.rowIndex + 1};
 
         switch (currentLine.keyword) {
             case SetKeyword: {
@@ -228,16 +228,16 @@ void SetMinus(Set a, Set b, Universum *u) {
 
     Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = -1};
     SetConstructor(&s);
-    
-    for (int index_1 = 0; index_1 < a.itemCount; index_1++) {
+
+    for (int i = 0; i < a.itemCount; i++) {
         int found = 0;
-        for (int index_2 = 0; index_2 < b.itemCount; index_2++) {
-            if (b.items[index_2] == a.items[index_1]) {
+        for (int j = 0; j < b.itemCount; j++) {
+            if (a.items[i] == b.items[j]) {
                 found = 1;
             }
         }
         if (found == 0) {
-            AddToSet(&s, b.items[index_1]);
+            AddToSet(&s, a.items[i]);
         }
     }
     DisplaySet(s, *u);
