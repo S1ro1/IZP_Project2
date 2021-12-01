@@ -55,6 +55,7 @@ typedef struct {
 typedef struct {
     int *items;
     int itemCount;
+    int maxItemCount;
     int lineNumber;
 } Set;
 
@@ -68,6 +69,12 @@ typedef struct {
     int pairCount;
     int LineNumber;
 } Relation;
+
+typedef struct {
+    Set *sets;
+    int setCount;
+    int maxSetCount;
+} Sets;
 
 
 // Prototypes
@@ -90,12 +97,19 @@ int UniversumDuplicateCheck(Universum *);
 void ClearTempWord(char *);
 int GetCommand(char *, Command *);
 int CheckCommandArg(int, char);
+int SetConstructor(Set *);
+int IsSetUnique(Set *);
+int AddToSet(Set *, int);
+int PopulateSet(DataLine *, Set *, Universum *);
+void DisplaySet(Set, Universum);
+void FreeSet(Set *);
+void* ArrAlloc(void *, size_t, int*, int);
 
 // --------------------------------------
 
 int main(int argc, char *argv[]) {
-
-    //Set *sets = NULL;
+    Sets setsArr = {.sets = NULL, .maxSetCount = DEFAULT_ALLOCATION_SIZE, .setCount = 0};
+    setsArr.sets = (Set*)ArrAlloc(setsArr.sets, sizeof(Set), 0, 0); // Allocation
     //Relation *relations = NULL;
     
     if (argc != 2) {
@@ -126,11 +140,21 @@ int main(int argc, char *argv[]) {
 
         switch (currentLine.keyword) {
             case SetKeyword:
-            /*  TODO:
-                SetCtor()
-                PopulateSet()
-                AddToSets()
-            */    
+            setsArr.sets = (Set*)ArrAlloc(setsArr.sets, sizeof(Set), &setsArr.maxSetCount, setsArr.setCount);
+            int result = 0; // TODO: general error variable in main
+
+            // Init set
+            Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = -1};
+            result = SetConstructor(&s);
+            if (result != 0) return result;
+
+            // Populate 
+            result = PopulateSet(&currentLine, &s, &u);
+            if (result != 0) return result;
+
+            // Add to set
+            setsArr.sets[setsArr.setCount] = s;
+            setsArr.setCount++;
                 break;
             case RelationKeyword:
             /*  TODO:
@@ -220,11 +244,63 @@ int main(int argc, char *argv[]) {
 
 // ================= DYNAMIC STRUCTURE MANIPULATION =================
 
+void* ArrAlloc(void *target, size_t typeSize, int *maxSize, int currentSize) {
+    void* tmp = target;
+
+    if (maxSize == 0 && currentSize == 0) {
+       tmp = malloc(typeSize * DEFAULT_ALLOCATION_SIZE);
+    } else 
+    if (*maxSize == currentSize) {
+        *maxSize = *maxSize*2; // Pointer dereference safe increment
+        tmp = realloc(target, *maxSize * 2);
+    }
+
+    if (tmp == NULL) {
+        fprintf(stderr, "Cannot allocate array");
+    }
+    return tmp;
+}
+
 DataLine DataLineConstructor() {
     DataLine list = {.data = NULL, .maxLength = DEFAULT_ALLOCATION_SIZE, .currentLength = 0, .rowIndex = 0, .keyword = '\0'};
     list.data = malloc(list.maxLength * sizeof(char));
     return list;
 }
+
+int SetConstructor(Set *set) {
+    if(set == NULL) return 1;
+
+    set->items = (int*)malloc(DEFAULT_ALLOCATION_SIZE);
+
+    if(set->items == NULL) return 1;
+    set->maxItemCount = DEFAULT_ALLOCATION_SIZE;
+    set->items = 0;
+    return 0;
+}
+
+int AddToSet(Set *set, int item) {
+    // Realloc check
+    if (set->maxItemCount == set->itemCount) {
+        set->maxItemCount *= 2;
+        int* tmp = realloc(set->items, set->maxItemCount);
+        if (tmp == NULL) return 1;
+        set->items = tmp;
+    }
+
+    set->items[set->itemCount] = item;
+    set->itemCount++;
+    
+    return 0;
+}
+
+void FreeSet(Set *set) {
+    if (set == NULL) return;
+
+    free(set->items);
+    set->maxItemCount = 0;
+    set->itemCount = 0;
+}
+
 int AddCharToDataLine(DataLine *list, char c) {
     if (list->currentLength == list->maxLength) {
         char *tmp = realloc(list->data, sizeof(char) * 2* list->maxLength);
@@ -322,7 +398,61 @@ void FreeUniversum(Universum *universum) {
     universum->itemCount = 0;
 }
 
-    // ==============================================================
+// ==============================================================
+
+int PopulateSet(DataLine *line, Set *set, Universum *universum) {
+    // Values init
+    char word[MAX_STRING_LENGTH] = {'\0'};
+    int wordIndex = 0;
+
+    // Getting items char by char
+    for (int i = 0; i < line->currentLength; i++) {
+        char currentChar = line->data[i];
+
+        if (currentChar != ' ') {
+            word[wordIndex] = currentChar;
+            wordIndex++;
+        } else {
+            int wordId = GetItemIndex(universum, word);
+
+            // Exception handling
+            if (wordId == -1) {
+                fprintf(stderr, "Item is not present in universum");
+                return 1;
+            }
+
+            int result = AddToSet(set, wordId);
+            if (result != 0) {
+                fprintf(stderr, "Cannot add item to the set");
+                return result;
+            }
+
+            ClearTempWord(word);
+            wordIndex = 0;   
+        }
+    }
+    
+    return IsSetUnique(set);
+}
+
+int IsSetUnique(Set *set) {
+    for (int i = 0; i < set->itemCount; i++) {
+        for (int j = 0; j < set->itemCount; j++) {
+            if (i == j) continue; // Avoid comparing item with itself
+
+            if (set->items[i] == set->items[j]) return 0;
+        }
+    }
+
+    return 1;
+}
+
+void DisplaySet(Set set, Universum universum) {
+    for (int i = 0; i < set.itemCount; i++) {
+        int currentItemId = set.items[i];
+        printf("%s", universum.items[currentItemId]);
+    }
+}
 
 int GetItemIndex(Universum *universum, char *item) {
     int index = -1;
