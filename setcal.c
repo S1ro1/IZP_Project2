@@ -116,7 +116,7 @@ void Card(Set);
 void SetUnion(Set, Set, Universum *);
 void SetMinus(Set, Set, Universum *);
 void SetIntersect(Set, Set, Universum *);
-bool SetEquals(Set, Set);
+void SetEquals(Set, Set);
 void IsSubset(Set, Set);
 void IsSubsetEq(Set, Set);
 
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
     //Relation *relations = NULL;
     
     if (argc != 2) {
-        printf("Invalid arguments");
+        fprintf(stderr, "Invalid arguments");
         return 1;
     }
     LineList lineList = LineListConstructor();
@@ -142,10 +142,10 @@ int main(int argc, char *argv[]) {
     
     // Loading input data
     int error = GetDataFromFile(&lineList, argv[1]);
-    (void) error; // TODO: handle errors
+    if (error != 0) return 1;
 
     // Load universum and universum set
-    Set universumSet = {.items = NULL, .itemCount = 0, .maxItemCount = 0};
+    Set universumSet = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = 1};
     universumResult = 
             PopulateUniversum(&lineList.dataLines[0], &u) || 
             GetUniversumSet(&universumSet, u, lineList.dataLines[0]);
@@ -158,6 +158,7 @@ int main(int argc, char *argv[]) {
     if (universumResult == 1) {
         return 1;
     }
+    AddToSets(&setCollection, universumSet);
     DisplayUniversum(u);
 
     // Resolving lines
@@ -226,10 +227,10 @@ void Card(Set set) {
     printf("%d\n", set.itemCount);
 }
 
-bool SetEquals(Set a, Set b) {
+void SetEquals(Set a, Set b) {
     if (a.itemCount != b.itemCount) {
         printf("false\n");
-        return 0;
+        return;
     }
     bool found = false;
 
@@ -242,11 +243,10 @@ bool SetEquals(Set a, Set b) {
         }
         if (found == false) {
             printf("false\n");
-            return false;
+            return;
         }
     }
     printf("true\n");
-    return true;
 }
 
 void SetsUnion(Set a, Set b, Universum *u) {
@@ -310,6 +310,8 @@ void SetIntersect(Set a, Set b, Universum *u) {
     DisplaySet(s, *u);
 }
 
+
+
 void IsSubset(Set a, Set b) {
     int DuplCount = 0;
     for (int i = 0; i < a.itemCount; i++) {
@@ -320,7 +322,25 @@ void IsSubset(Set a, Set b) {
             }
         }
     }
-    if (DuplCount == a.itemCount && !(SetEquals(a, b))) {
+
+    bool equals = false;
+
+    //to check if they're equal
+    for (int i = 0; i < a.itemCount; i++) {
+        bool found = false;
+        for (int j = 0; j < b.itemCount; j++) {
+            if (a.items[i] == b.items[j]) {
+                found = true;
+            }
+        }
+        if (found == false) {
+            equals = false;
+            break;
+        }
+        equals = true;
+    }
+    
+    if (DuplCount == a.itemCount && !equals) {
         printf("true\n");
     } else {
         printf("false\n");
@@ -366,7 +386,7 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
         Card(A);
     }
     else if (strcmp("complement", keyword) == 0) {
-        ;
+        SetMinus(setCollection->sets[0], A, &universum);
     }
     else if (strcmp("union", keyword) == 0) {
         SetsUnion(A, B, &universum);
@@ -603,12 +623,19 @@ int GetUniversumSet(Set *set, Universum universum, DataLine universumLine) {
     result = 
         SetConstructor(set) ||
         PopulateSet(&universumLine, set, &universum);
-    if (result != 0) return 1;
+    if (result != 0) {
+        fprintf(stderr, "Error loading the universum"); 
+        return 1;
+    }
     return 0;
 }
 
 void DisplayUniversum(Universum universum) {
-    printf("U ");
+    if (universum.itemCount == 0) {
+        printf("U");
+    } else {
+        printf("U "); //needs redoing
+    }
     for (int i = 0; i < universum.itemCount; i++) {
         printf("%s", universum.items[i]);
 
@@ -635,7 +662,10 @@ int PopulateSet(DataLine *line, Set *set, Universum *universum) {
             word[wordIndex] = currentChar;
             wordIndex++;
 
-            if (wordIndex == MAX_STRING_LENGTH - 1) return 1;
+            if (wordIndex == MAX_STRING_LENGTH) {
+                fprintf(stderr, "Universum element exceeds the maximal length\n");
+                return 1;
+            }
             continue;
         }
 
@@ -683,7 +713,11 @@ int IsSetUnique(Set set) {
 }
 
 void DisplaySet(Set set, Universum universum) {
-    printf("S ");
+    if (set.itemCount == 0) {
+        printf("S");
+    } else {
+        printf("S ");
+    }
     for (int i = 0; i < set.itemCount; i++) {
         int currentItemId = set.items[i];
         printf("%s", universum.items[currentItemId]);
@@ -712,6 +746,7 @@ int GetDataFromFile(LineList *LineList, char *fileName) {
     FILE *file = fopen(fileName, "r");
     if (file == NULL) {
         fprintf(stderr, "Wrong file path");
+        return 1;
     }
 
     DataLine line = DataLineConstructor();
@@ -779,12 +814,15 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
     
     for (int i = 0; data[i] != '\0'; i++) {
         char currentChar = data[i];
-        if (wordLength > 30) return 1;
-
         if (currentChar != ' ') {
             if (currentChar == '\n') {
-                AddUniversumItem(universum, tmpWord);
-                break;
+                if (IsKeyword(tmpWord)) {
+                    fprintf(stderr, "Universum element is a forbidden word");
+                    return 1;
+                } else {
+                    AddUniversumItem(universum, tmpWord);
+                    break;
+                }
             }
             if (!isalpha(currentChar)){
                 fprintf(stderr, "Universum element contains unsupported char!");
@@ -793,12 +831,18 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
             tmpWord[wordLength] = currentChar;
             wordLength++;
         } else {
+            
             if (wordLength == 0) {
                 fprintf(stderr, "Universum element is separated by 2 or more spaces\n");
-            return 1;
+                return 1;
             }
             if (IsKeyword(tmpWord)) {
                 fprintf(stderr, "Universum element is a forbidden word");
+                return 1;
+            }
+            if (tmpWord[31] != '\0') {
+                fprintf(stderr, "Password exceeds the maximal length\n");
+                return 1;
             }
             wordLength = 0;
             AddUniversumItem(universum, tmpWord);
