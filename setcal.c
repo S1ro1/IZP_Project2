@@ -663,6 +663,7 @@ int CheckCommandArg(int number, char symbol){
 int GetCommand(char line[], Command *command){
     int SpaceCount = 0;
     int SpaceIdentifier = false;
+    strcpy(command->keyword, "'\0'"); //reset command
     for(int index_1 = 0, index_2 = 0; line[index_1] != '\0'; index_1++){
 
         if (line[index_1] == ' '){
