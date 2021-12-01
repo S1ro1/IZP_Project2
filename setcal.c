@@ -68,6 +68,7 @@ typedef struct {
     Pair *pairs;
     int pairCount;
     int LineNumber;
+    int maxSize;
 } Relation;
 
 typedef struct {
@@ -105,6 +106,7 @@ int PopulateSet(DataLine *, Set *, Universum *);
 void DisplaySet(Set, Universum);
 void FreeSet(Set *);
 void* ArrAlloc(void *, size_t, int*, int);
+Relation RelationCtor();
 
 // --------------------------------------
 
@@ -747,4 +749,9 @@ int GetCommand(char line[], Command *command){
         return 1;
     }
     return 0;
+}
+Relation RelationCtor(){
+    Relation relation = {.pairs = NULL, .pairCount = 0, .maxSize = 0, .LineNumber = 0};
+    relation.pairs = malloc(relation.pairCount * sizeof(Pair));
+    return relation;
 }
