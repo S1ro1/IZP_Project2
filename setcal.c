@@ -100,6 +100,7 @@ int CheckCommandArg(int, char);
 int SetConstructor(Set *);
 int IsSetUnique(Set *);
 int AddToSet(Set *, int);
+int AddToSets(Sets *, Set);
 int PopulateSet(DataLine *, Set *, Universum *);
 void DisplaySet(Set, Universum);
 void FreeSet(Set *);
@@ -108,8 +109,8 @@ void* ArrAlloc(void *, size_t, int*, int);
 // --------------------------------------
 
 int main(int argc, char *argv[]) {
-    Sets setsArr = {.sets = NULL, .maxSetCount = DEFAULT_ALLOCATION_SIZE, .setCount = 0};
-    setsArr.sets = (Set*)ArrAlloc(setsArr.sets, sizeof(Set), 0, 0); // Allocation
+    Sets setCollection = {.sets = NULL, .maxSetCount = 0, .setCount = 0};
+    setCollection.sets = (Set*)ArrAlloc(setCollection.sets, sizeof(Set), &setCollection.maxSetCount, 0); // Allocation
     //Relation *relations = NULL;
     
     if (argc != 2) {
@@ -137,23 +138,21 @@ int main(int argc, char *argv[]) {
         DataLine currentLine = lineList.dataLines[i];
 
         switch (currentLine.keyword) {
-            case SetKeyword:
-            setsArr.sets = (Set*)ArrAlloc(setsArr.sets, sizeof(Set), &setsArr.maxSetCount, setsArr.setCount);
-            int result = 0; // TODO: general error variable in main
+            case SetKeyword: {
+                int result = 0;
 
-            // Init set
-            Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = -1};
-            result = SetConstructor(&s);
-            if (result != 0) return result;
+                Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = currentLine.rowIndex};
 
-            // Populate 
-            result = PopulateSet(&currentLine, &s, &u);
-            if (result != 0) return result;
+                result = 
+                    SetConstructor(&s) ||
+                    PopulateSet(&currentLine, &s, &u) ||
+                    AddToSets(&setCollection, s);
 
-            // Add to set
-            setsArr.sets[setsArr.setCount] = s;
-            setsArr.setCount++;
+                if (result != 0) return result;
+                DisplaySet(s, u);
                 break;
+            }
+                
             case RelationKeyword:
             /*  TODO:
                 RelationCtor()
@@ -242,21 +241,37 @@ int main(int argc, char *argv[]) {
 
 // ================= DYNAMIC STRUCTURE MANIPULATION =================
 
-void* ArrAlloc(void *target, size_t typeSize, int *maxSize, int currentSize) {
+void* ArrAlloc(void *target, size_t typeSize, int *maxSize_p, int currentSize) {
     void* tmp = target;
 
-    if (maxSize == 0 && currentSize == 0) {
-       tmp = malloc(typeSize * DEFAULT_ALLOCATION_SIZE);
-    } else 
-    if (*maxSize == currentSize) {
-        *maxSize = *maxSize*2; // Pointer dereference safe increment
-        tmp = realloc(target, *maxSize * 2);
+    // New allocation
+    if (*maxSize_p == 0 && currentSize == 0) {
+       *maxSize_p = DEFAULT_ALLOCATION_SIZE;
+       tmp = malloc(typeSize * *maxSize_p);
     }
 
+    // Realloc
+    if (*maxSize_p == currentSize) {
+        *maxSize_p *= 2;
+        tmp = realloc(target, *maxSize_p);
+    }
+
+    // Check for allocation
     if (tmp == NULL) {
-        fprintf(stderr, "Cannot allocate array");
+        fprintf(stderr, "Cannot allocate array\n");
     }
     return tmp;
+}
+
+int AddToSets(Sets *setColl, Set set) {
+    // Ensure collection capacity
+    setColl->sets = ArrAlloc(setColl->sets, sizeof(Set), &setColl->maxSetCount, setColl->setCount);
+    if (setColl == NULL) return 1;
+
+    setColl->sets[setColl->setCount] = set;
+    setColl->setCount++;
+
+    return 0;
 }
 
 DataLine DataLineConstructor() {
@@ -268,11 +283,11 @@ DataLine DataLineConstructor() {
 int SetConstructor(Set *set) {
     if(set == NULL) return 1;
 
-    set->items = (int*)malloc(DEFAULT_ALLOCATION_SIZE);
+    set->items = malloc(DEFAULT_ALLOCATION_SIZE * sizeof(int));
 
     if(set->items == NULL) return 1;
     set->maxItemCount = DEFAULT_ALLOCATION_SIZE;
-    set->items = 0;
+    set->itemCount = 0;
     return 0;
 }
 
@@ -280,7 +295,7 @@ int AddToSet(Set *set, int item) {
     // Realloc check
     if (set->maxItemCount == set->itemCount) {
         set->maxItemCount *= 2;
-        int* tmp = realloc(set->items, set->maxItemCount);
+        int* tmp = realloc(set->items, set->maxItemCount * sizeof(int));
         if (tmp == NULL) return 1;
         set->items = tmp;
     }
@@ -387,9 +402,12 @@ int ReallocUniversum(Universum *universum, int newSize) {
 }
 
 void FreeUniversum(Universum *universum) {
+    // Inner arrays cleanup
     for (int i = 0; i < universum->maxItemCount; i++) {
         free(universum->items[i]);
     }
+
+    // Outer cleanup
     free(universum->items);
     universum->items = NULL;
     universum->maxItemCount = 0;
@@ -403,34 +421,45 @@ int PopulateSet(DataLine *line, Set *set, Universum *universum) {
     char word[MAX_STRING_LENGTH] = {'\0'};
     int wordIndex = 0;
 
-    // Getting items char by char
-    for (int i = 0; i < line->currentLength; i++) {
+    for (int i = 0; i < line->currentLength; i++) { 
         char currentChar = line->data[i];
 
-        if (currentChar != ' ') {
+        // Adding item's char to word array
+        if (currentChar != ' ' && currentChar != '\n') {
             word[wordIndex] = currentChar;
             wordIndex++;
-        } else {
-            int wordId = GetItemIndex(universum, word);
 
-            // Exception handling
-            if (wordId == -1) {
-                fprintf(stderr, "Item is not present in universum");
-                return 1;
-            }
-
-            int result = AddToSet(set, wordId);
-            if (result != 0) {
-                fprintf(stderr, "Cannot add item to the set");
-                return result;
-            }
-
-            ClearTempWord(word);
-            wordIndex = 0;   
+            if (wordIndex == MAX_STRING_LENGTH - 1) return 1;
+            continue;
         }
+
+        // Double space
+        if (wordIndex == 0) {
+            fprintf(stderr, "Syntax error in set on index %d\n", line->rowIndex);
+            return 1;
+        }
+
+        int wordId = GetItemIndex(universum, word);
+
+        // Invalid item
+        if (wordId == -1) {
+            fprintf(stderr, "Item is not present in universum");
+            return 1;
+        }
+
+        // Adding item to set
+        int result = AddToSet(set, wordId);
+        if (result != 0) {
+            fprintf(stderr, "Cannot add item to the set");
+            return result;
+        }
+
+        ClearTempWord(word);
+        wordIndex = 0;
+        
     }
     
-    return IsSetUnique(set);
+    return !IsSetUnique(set);
 }
 
 int IsSetUnique(Set *set) {
@@ -446,10 +475,16 @@ int IsSetUnique(Set *set) {
 }
 
 void DisplaySet(Set set, Universum universum) {
+    printf("{ ");
     for (int i = 0; i < set.itemCount; i++) {
         int currentItemId = set.items[i];
         printf("%s", universum.items[currentItemId]);
+
+        if (i < set.itemCount - 1) {
+            printf(", ");
+        }
     }
+    printf(" }\n");
 }
 
 int GetItemIndex(Universum *universum, char *item) {
