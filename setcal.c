@@ -1,5 +1,5 @@
 /* TODO
-- load sets, display set - Dosilox
+- load sets, display set - Dosilox - ~~DONE~~
 - load relations, display relation - Pepa
 - command struct - Miski
 - funcs over sets - Siro
@@ -94,12 +94,11 @@ int IsKeyword(char *);
 int GetItemIndex(Universum *, char *);
 void FreeUniversum(Universum *);
 int ResolveCommand(Command, Set *, Relation *, Universum);
-int UniversumDuplicateCheck(Universum *);
 void ClearTempWord(char *);
 int GetCommand(char *, Command *);
 int CheckCommandArg(int, char);
 int SetConstructor(Set *);
-int IsSetUnique(Set *);
+int IsSetUnique(Set);
 int AddToSet(Set *, int);
 int AddToSets(Sets *, Set);
 int PopulateSet(DataLine *, Set *, Universum *);
@@ -108,6 +107,7 @@ void FreeSet(Set *);
 void* ArrAlloc(void *, size_t, int*, int);
 Relation RelationCtor();
 void DisplayUniversum(Universum);
+int GetUniversumSet(Set *, Universum, DataLine);
 
 // --------------------------------------
 
@@ -121,22 +121,35 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     LineList lineList = LineListConstructor();
+
+    // Universum allocation
     Universum u = {.items = NULL, .itemCount = 0, .maxItemCount = DEFAULT_ALLOCATION_SIZE};
     int universumResult = InitUniversum(&u);
     if (universumResult != 0) {
         return 1;
     }
     
+    // Loading input data
     int error = GetDataFromFile(&lineList, argv[1]);
-    (void) error;
+    (void) error; // TODO: handle errors
 
-    universumResult = PopulateUniversum(&lineList.dataLines[0], &u) || UniversumDuplicateCheck(&u);
+    // Load universum and universum set
+    Set universumSet = {.items = NULL, .itemCount = 0, .maxItemCount = 0};
+    universumResult = 
+            PopulateUniversum(&lineList.dataLines[0], &u) || 
+            GetUniversumSet(&universumSet, u, lineList.dataLines[0]);
+
+    if (!IsSetUnique(universumSet)) {
+        fprintf(stderr, "Universum contains duplicate items\n");
+        return 1;
+    }
 
     if (universumResult == 1) {
-        fprintf(stderr,"Failed to load universum");
         return 1;
     }
     DisplayUniversum(u);
+
+    // Resolving lines
     //Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
     for (int i = 1; i < lineList.rowCount; i++) {
         DataLine currentLine = lineList.dataLines[i];
@@ -151,6 +164,11 @@ int main(int argc, char *argv[]) {
                     SetConstructor(&s) ||
                     PopulateSet(&currentLine, &s, &u) ||
                     AddToSets(&setCollection, s);
+
+                if (!IsSetUnique(s)) {
+                    fprintf(stderr, "Set on index %d has duplicate items\n", currentLine.rowIndex);
+                    return 1;
+                }
 
                 if (result != 0) return result;
                 DisplaySet(s, u);
@@ -420,6 +438,15 @@ void FreeUniversum(Universum *universum) {
 
 // ==============================================================
 
+int GetUniversumSet(Set *set, Universum universum, DataLine universumLine) {
+    int result;
+    result = 
+        SetConstructor(set) ||
+        PopulateSet(&universumLine, set, &universum);
+    if (result != 0) return 1;
+    return 0;
+}
+
 void DisplayUniversum(Universum universum) {
     printf("U ");
     for (int i = 0; i < universum.itemCount; i++) {
@@ -436,7 +463,10 @@ int PopulateSet(DataLine *line, Set *set, Universum *universum) {
     // Values init
     char word[MAX_STRING_LENGTH] = {'\0'};
     int wordIndex = 0;
-
+    if (set->items == NULL || line->data == NULL || universum->items == NULL) {
+        fprintf(stderr, "Array is not initialized");
+        return 1;
+    }
     for (int i = 0; i < line->currentLength; i++) { 
         char currentChar = line->data[i];
 
@@ -450,10 +480,13 @@ int PopulateSet(DataLine *line, Set *set, Universum *universum) {
         }
 
         // Double space
-        if (wordIndex == 0) {
+        if (wordIndex == 0 && set->itemCount > 0) {
             fprintf(stderr, "Syntax error in set on index %d\n", line->rowIndex);
             return 1;
         }
+
+        // Ignore empty sets
+        if (word[0] == '\0') continue;
 
         int wordId = GetItemIndex(universum, word);
 
@@ -473,17 +506,16 @@ int PopulateSet(DataLine *line, Set *set, Universum *universum) {
         ClearTempWord(word);
         wordIndex = 0;
         
-    }
-    
-    return !IsSetUnique(set);
+    }    
+    return 0;
 }
 
-int IsSetUnique(Set *set) {
-    for (int i = 0; i < set->itemCount; i++) {
-        for (int j = 0; j < set->itemCount; j++) {
+int IsSetUnique(Set set) {
+    for (int i = 0; i < set.itemCount; i++) {
+        for (int j = 0; j < set.itemCount; j++) {
             if (i == j) continue; // Avoid comparing item with itself
 
-            if (set->items[i] == set->items[j]) return 0;
+            if (set.items[i] == set.items[j]) return 0;
         }
     }
 
@@ -514,21 +546,6 @@ int GetItemIndex(Universum *universum, char *item) {
     }
 
     return index;
-}
-
-//duplicate check in universum
-int UniversumDuplicateCheck(Universum *universum){
-    for (int i = 0; i < universum->itemCount; i++) {
-        char *currentItem = universum->items[i];
-
-        for (int j = 0; j < universum->itemCount; j++) {
-            if (j == i) continue;
-            char *comparingItem = universum->items[j];
-
-            if (strcmp(currentItem, comparingItem) == 0) return 1;
-        }
-    }
-    return 0;
 }
 
 int GetDataFromFile(LineList *LineList, char *fileName) {
@@ -603,6 +620,7 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
     for (int i = 0; data[i] != '\0'; i++) {
         char currentChar = data[i];
         if (wordLength > 30) return 1;
+
         if (currentChar != ' ') {
             if (currentChar == '\n') {
                 AddUniversumItem(universum, tmpWord);
@@ -616,7 +634,7 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
             wordLength++;
         } else {
             if (wordLength == 0) {
-                fprintf(stderr, "Universum element separated by 2 spaces");
+                fprintf(stderr, "Universum element is separated by 2 or more spaces\n");
             return 1;
             }
             if (IsKeyword(tmpWord)) {
