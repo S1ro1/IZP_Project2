@@ -145,7 +145,6 @@ int main(int argc, char *argv[]) {
     }
     DisplayUniversum(u);
     //int CommandResult = 0;
-    Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
     for (int i = 1; i < lineList.rowCount; i++) {
         Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
         DataLine currentLine = lineList.dataLines[i];
@@ -256,8 +255,6 @@ int GetSetArrIndex(int index, Sets *sets) {
 int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
     char *keyword = command.keyword;
 
-    printf("A is: %d", command.A);
-
     Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
     Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
 
@@ -277,7 +274,7 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
         ;
     }
     else if (strcmp("minus", keyword) == 0) {
-        ;
+        SetMinus(A, B, &universum);
     }
     else if (strcmp("subseteq", keyword) == 0) {
         ;
@@ -761,8 +758,7 @@ int GetCommand(char line[], Command *command){
     int SpaceCount = 0;
     int SpaceIdentifier = false;
     strcpy(command->keyword, "'\0'"); //reset command
-    for(int index_1 = 0, index_2 = 0; line[index_1] != '\n'; index_1++){
->>>>>>> refs/remotes/origin/main
+    for(int index_1 = 0, index_2 = 0; line[index_1] != '\n'; index_1++) {
         if (line[index_1] == ' '){
             //check if whether there are 2 spaces in a row
             if (SpaceIdentifier){
