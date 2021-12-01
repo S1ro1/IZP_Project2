@@ -759,7 +759,7 @@ int GetCommand(char line[], Command *command){
         SpaceIdentifier = false; //if symbol is not 'space'
 
         //populating command->keyword
-        if (SpaceCount == 0){
+        if (SpaceCount == 1){
             //check if keyword is no longer than 13 + 1 length
             if (index_2 >= 13){
                 fprintf(stderr, "Incorrect command\n");
@@ -770,7 +770,7 @@ int GetCommand(char line[], Command *command){
             index_2++;
         }
         //add to command->A
-        else if (SpaceCount == 1){
+        else if (SpaceCount == 2){
 
             if (CheckCommandArg(command->A, line[index_1]) == 1) return 1;
 
@@ -784,7 +784,7 @@ int GetCommand(char line[], Command *command){
             }
         }
         //add to command->B
-        else if (SpaceCount == 2){
+        else if (SpaceCount == 3){
 
             if (CheckCommandArg(command->B, line[index_1]) == 1) return 1;
 
@@ -798,7 +798,7 @@ int GetCommand(char line[], Command *command){
             }
         }
         //add to command->C
-        else if (SpaceCount == 3){
+        else if (SpaceCount == 4){
 
             if (CheckCommandArg(command->C, line[index_1]) == 1) return 1;
 
@@ -811,7 +811,7 @@ int GetCommand(char line[], Command *command){
                 command->C += (line[index_1] - '0');
             }
         }
-        else if (SpaceCount > 3){
+        else if (SpaceCount > 4){
             fprintf(stderr, "Too many arguments in command line\n");
             return 1;
         }
