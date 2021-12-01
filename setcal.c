@@ -132,8 +132,6 @@ int main(int argc, char *argv[]) {
         fprintf(stderr,"Failed to load universum");
         return 1;
     }
-
-
     //Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
     for (int i = 1; i < lineList.rowCount; i++) {
         DataLine currentLine = lineList.dataLines[i];
@@ -362,13 +360,13 @@ int FreeLineList(LineList *lines) {
 
 int ReallocUniversum(Universum *universum, int newSize) {
     if (universum->itemCount == 0) {
-        universum->items = (char **)malloc(DEFAULT_ALLOCATION_SIZE);
+        universum->items = (char **)malloc(DEFAULT_ALLOCATION_SIZE * sizeof(char *));
         if (universum->items == NULL) {
             fprintf(stderr, "Allocation unsuccessful");
             return 1;
         }
     } else {
-        char **tmp = realloc(universum->items, universum->itemCount + newSize);
+        char **tmp = realloc(universum->items, newSize * sizeof(char *));
 
         if (tmp == NULL) {
             fprintf(stderr, "Allocation unsuccessful");
@@ -377,10 +375,10 @@ int ReallocUniversum(Universum *universum, int newSize) {
         universum->items = tmp;
     }
 
-    // columns allocation
+    //columns allocation
     for (int i = universum->itemCount; i < universum->maxItemCount; i++) {
         universum->items[i] = (char *)malloc(MAX_STRING_LENGTH);
-        if (universum->items[i] == NULL){
+        if (universum->items[i] == NULL) {
             fprintf(stderr, "Allocation unsuccessful");
             return 1;
         }
@@ -514,6 +512,7 @@ int GetDataFromFile(LineList *LineList, char *fileName) {
 
         // At the end of line
         if (currentChar == '\n') {
+            AddCharToDataLine(&line, currentChar);
             AddCharToDataLine(&line, '\0'); // To end the string
             line.rowIndex = currentRow;
             AddToLineList(LineList, line);
@@ -554,6 +553,10 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
         char currentChar = data[i];
         if (wordLength > 30) return 1;
         if (currentChar != ' ') {
+            if (currentChar == '\n') {
+                AddUniversumItem(universum, tmpWord);
+                break;
+            }
             if (!isalpha(currentChar)){
                 fprintf(stderr, "Universum element contains unsupported char!");
                 return 1;
