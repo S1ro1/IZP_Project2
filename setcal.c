@@ -422,7 +422,7 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
     else if (strcmp("equals", keyword) == 0) {
         SetEquals(A, B);
     }
-    else if (strcmp("reflexive", keyword) == 0) { // TODO: command A == -1
+    /*else if (strcmp("reflexive", keyword) == 0) { // TODO: command A == -1
         if (!(command.B != -1 || command.C != -1)) {
             return 1;
         }
@@ -520,7 +520,7 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
         else {
             printf("false\n");
         }
-    } else {    
+    }*/ else {    
         return 1;
     }
     return 0;
