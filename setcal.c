@@ -1294,20 +1294,21 @@ int IsInjective(Relation *relationArr, int relcount, Sets *sets, Command command
     if (!CheckFunctionValidity(relationArr, sets, command, relIndex, set1Index, set2Index)) {
         return 0;
     }
-    if (sets->sets[set1Index].itemCount > sets->sets[set2Index].itemCount) {
-        return 0;
+    bool *haveSeen = malloc(sizeof(bool) * sets->sets[set2Index].itemCount);
+    for (int i = 0; i < sets->sets[set2Index].itemCount; i++) {
+        haveSeen[i] = false;
     }
-    for (int i = 0; i < relationArr[relIndex].pairCount; i++) {
-        int count = 0;
-        for(int j = i; j < relationArr[relIndex].pairCount; j++) {
-            if (relationArr[relIndex].pairs[i].right == relationArr[relIndex].pairs[j].right) {
-                count++;
-                if (count != 1) {
-                    return 0;
-                }
-            }
+    for(int i = 0;  i<relationArr[relIndex].pairCount; i++) {
+        if (haveSeen[relationArr[relIndex].pairs[i].right] != true) {
+            haveSeen[relationArr[relIndex].pairs[i].right] = true;
         }
+        else {
+            free(haveSeen);
+            return 0;
+        }
+    
     }
+    free(haveSeen);
     return 1;
 }
 
@@ -1315,12 +1316,28 @@ int IsSurjective(Relation *relationArr, int relcount, Sets *sets, Command comman
     int relIndex = FindRelIndex(relationArr, relcount, command.A);
     int set1Index = GetSetArrIndex(command.B, sets);
     int set2Index = GetSetArrIndex(command.C, sets);
+    int count = 0;
     if (!CheckFunctionValidity(relationArr, sets, command, relIndex, set1Index, set2Index)) {
         return 0;
     }
-    if (sets->sets[set1Index].itemCount < sets->sets[set2Index].itemCount) {
+    bool *haveSeen = malloc(sizeof(bool) * sets->sets[set2Index].itemCount);
+    for (int i = 0; i < sets->sets[set2Index].itemCount; i++) {
+        haveSeen[i] = false;
+    }
+    for(int i = 0;  i<relationArr[relIndex].pairCount; i++) {
+        haveSeen[relationArr[relIndex].pairs[i].right] = true;
+    }
+    
+    for(int i = 0;  i<relationArr[relIndex].pairCount; i++) {
+        if (haveSeen[relationArr[relIndex].pairs[i].right] == true) {
+            count++;
+        }
+    }
+    free(haveSeen);
+    if (count != sets->sets[set2Index].itemCount) {
         return 0;
     }
+
     return 1;
 }
 
