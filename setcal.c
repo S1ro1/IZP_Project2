@@ -131,7 +131,7 @@ void IsTransitive(Relation *, int);
 int IsFunction(Relation *, int);
 void PrintDomain(Relation *, int, Universum);
 void PrintCodomain(Relation *, int, Universum);
-int CheckFunctionValidity(Relation *, Sets *, Command, int, int, int);
+int CheckFunctionValidity(Relation *, Sets *, int, int, int);
 int IsInjective(Relation *, int, Sets *, Command);
 int IsSurjective(Relation *, int, Sets *, Command);
 int IsBijective(Relation *, int, Sets *, Command);
@@ -1093,34 +1093,15 @@ int FindRelIndex(Relation *relationArr, int relcount, int command){
 }
 
 void IsReflexive(Relation *relationArr, int relindex, Universum universum) {
-    bool *haveSeen = malloc(sizeof(bool) * universum.itemCount);
-    int uniqueItems = 0;
-    int count = 0;
-
-    for (int i = 0; i < universum.itemCount; i++) {
-        haveSeen[i] = false;
-    }
-    for(int i = 0;  i<relationArr[relindex].pairCount; i++) {
-        haveSeen[relationArr[relindex].pairs[i].right] = true;
-        haveSeen[relationArr[relindex].pairs[i].left] = true;
-    
-    }
-    for(int i = 0;  i<universum.itemCount; i++) {
-        if (haveSeen == true) {
-            uniqueItems++;
-        }
-    
-    }
-    free(haveSeen);
-
+    int reflexiveElemets = 0;
     for (int i = 0; i < universum.itemCount; i++) {
         if (relationArr[relindex].pairs[i].right == relationArr[relindex].pairs[i].left) {
-            count++;
-            }
-    }
-    if (count != uniqueItems) {
-        printf("false\n");
+            reflexiveElemets++;
         }
+    }
+    if (reflexiveElemets != universum.itemCount) {
+        printf("false\n");
+    }
     else {
         printf("true\n");
     }
@@ -1267,7 +1248,7 @@ int IsInSet(Sets *sets, int elementIndex, int setIndex) {
 }
 
 // function for last 3 operations
-int CheckFunctionValidity(Relation *relationArr, Sets *sets, Command command, int relIndex, int set1Index, int set2Index) {
+int CheckFunctionValidity(Relation *relationArr, Sets *sets, int relIndex, int set1Index, int set2Index) {
     if (!IsFunction(relationArr, relIndex)){
         return 0;
     }
@@ -1288,7 +1269,7 @@ int IsInjective(Relation *relationArr, int relcount, Sets *sets, Command command
     int relIndex = FindRelIndex(relationArr, relcount, command.A);
     int set1Index = GetSetArrIndex(command.B, sets);
     int set2Index = GetSetArrIndex(command.C, sets);
-    if (!CheckFunctionValidity(relationArr, sets, command, relIndex, set1Index, set2Index)) {
+    if (!CheckFunctionValidity(relationArr, sets, relIndex, set1Index, set2Index)) {
         return 0;
     }
     bool *haveSeen = malloc(sizeof(bool) * sets->sets[set2Index].itemCount);
@@ -1314,7 +1295,7 @@ int IsSurjective(Relation *relationArr, int relcount, Sets *sets, Command comman
     int set1Index = GetSetArrIndex(command.B, sets);
     int set2Index = GetSetArrIndex(command.C, sets);
     int count = 0;
-    if (!CheckFunctionValidity(relationArr, sets, command, relIndex, set1Index, set2Index)) {
+    if (!CheckFunctionValidity(relationArr, sets, relIndex, set1Index, set2Index)) {
         return 0;
     }
     bool *haveSeen = malloc(sizeof(bool) * sets->sets[set2Index].itemCount);
