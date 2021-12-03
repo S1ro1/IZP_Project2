@@ -104,16 +104,17 @@ int GetCommand(char *, Command *);
 int CheckCommandArg(int, char);
 int SetConstructor(Set *);
 int IsSetUnique(Set);
+int IsRelationUnique(Relation);
 int AddToSet(Set *, int);
 int AddToSets(Sets *, Set);
 int PopulateSet(DataLine *, Set *, Universum *);
 void DisplaySet(Set, Universum);
 void FreeSet(Set *);
 void* ArrAlloc(void *, size_t, int*, int);
-Relation RelationCtor();
-int AddToRelation(int, int, Pair *, Relation *);
+int RelationCtor(Relation *);
+int AddToRelation(int, int, Relation *);
 int AddToRelations(Relations *, Relation);
-int PopulateRelation(DataLine *, Pair *, Relation *, Universum *);
+int PopulateRelation(DataLine *, Relation *, Universum *);
 int DisplayRelation(Universum, Relation);
 void DisplayUniversum(Universum);
 int GetUniversumSet(Set *, Universum, DataLine);
@@ -195,6 +196,7 @@ int main(int argc, char *argv[]) {
         int CommandResult = 0;
 
         Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = currentLine.rowIndex + 1};
+        Relation r = {.pairs = NULL, .pairCount = 0, .maxSize = 0, .LineNumber = currentLine.rowIndex + 1};
 
         switch (currentLine.keyword) {
             case SetKeyword: {
@@ -218,13 +220,18 @@ int main(int argc, char *argv[]) {
 
             }
                 
-            case RelationKeyword:
-            /*  TODO:
-                RelationCtor()
-                PopulateRelation()
-                AddToRelations()
-            */
+            case RelationKeyword: {
+                int result = 0;
+                result = RelationCtor(&r) ||PopulateRelation(&currentLine, &r, &u);
+                if(!IsRelationUnique(r)){
+                    fprintf(stderr, "Relation on index %d has duplicate items.\n", currentLine.rowIndex);
+                }
+                if(result != 0) return result;
+                DisplayRelation(u, r);
+                if(result != 0) return result;
                 break;
+            }
+                
             case CommandKeyword:
                 CommandResult = GetCommand(currentLine.data, &command);
                 if (CommandResult == 1) return 1;
@@ -805,6 +812,16 @@ int IsSetUnique(Set set) {
 
     return 1;
 }
+int IsRelationUnique(Relation relation){
+    for (int i = 0; i <relation.pairCount; i++){
+        for(int j = 0; j < relation.pairCount; i++){
+            if (i == j) continue;
+            if(relation.pairs[i].left == relation.pairs[j].right && relation.pairs[i].right == relation.pairs[j].right){
+                return 0;
+            }
+        }
+    }
+}
 
 void DisplaySet(Set set, Universum universum) {
     if (set.itemCount == 0) {
@@ -1087,12 +1104,15 @@ int GetCommand(char line[], Command *command){
     return 0;
 }
 //Loading relations
-Relation RelationCtor(){
-    Relation relation = {.pairs = NULL, .pairCount = 0, .maxSize = 0, .LineNumber = 0};
-    relation.pairs = malloc(relation.pairCount * sizeof(Pair));
-    return relation;
+    int RelationCtor(Relation *relation){
+    if(relation == NULL) return 1;
+    relation->pairs = malloc(DEFAULT_ALLOCATION_SIZE * sizeof(int));
+    if(relation->pairs == NULL) return 1;
+    relation->maxSize = DEFAULT_ALLOCATION_SIZE;
+    relation->pairCount = 0;
+    return 0;
 }
-int PopulateRelation(DataLine *source, Pair *pair, Relation *relation, Universum *universum){
+int PopulateRelation(DataLine *source, Relation *relation, Universum *universum){
     //Values init
     char pairFrstItem[MAX_STRING_LENGTH]= {'\0'};
     char pairSecondItem[MAX_STRING_LENGTH]= {'\0'};
@@ -1136,7 +1156,7 @@ int PopulateRelation(DataLine *source, Pair *pair, Relation *relation, Universum
             fprintf(stderr, "Item is not present in universum");
             return 1;
         }
-        int result = AddToRelation(atoi(pairFrstItem), atoi(pairSecondItem), pair, relation);
+        int result = AddToRelation(atoi(pairFrstItem), atoi(pairSecondItem), relation);
         if(result != 0){
             fprintf(stderr, "Cannot add pair to the relation.\n");
             return 1;
@@ -1148,7 +1168,7 @@ int PopulateRelation(DataLine *source, Pair *pair, Relation *relation, Universum
     }
 
 }
-int AddToRelation(int left, int right, Pair *pair, Relation *relation){
+int AddToRelation(int left, int right, Relation *relation){
     //Checking for reallocation
     if(relation->maxSize == relation->pairCount){
         relation->maxSize *= 2;
