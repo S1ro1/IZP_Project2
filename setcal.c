@@ -76,6 +76,11 @@ typedef struct {
     int setCount;
     int maxSetCount;
 } Sets;
+typedef struct {
+    Relation *relations;
+    int relCount;
+    int maxRelCount;
+} Relations;
 
 
 // Prototypes
@@ -106,6 +111,10 @@ void DisplaySet(Set, Universum);
 void FreeSet(Set *);
 void* ArrAlloc(void *, size_t, int*, int);
 Relation RelationCtor();
+int AddToRelation(int, int, Pair *, Relation *);
+int AddToRelations(Relations *, Relation);
+int PopulateRelation(DataLine *, Pair *, Relation *, Universum *);
+int DisplayRelation(Universum, Relation);
 void DisplayUniversum(Universum);
 int GetUniversumSet(Set *, Universum, DataLine);
 int GetSetArrIndex(int, Sets *);
@@ -970,6 +979,7 @@ void ClearTempWord(char *tmpWord) {
     }
 }
 
+
 //function check arguments in commands
 int CheckCommandArg(int number, char symbol){
     if (number >= 100){ //100 * 10 more symbol wanted to be added
@@ -1076,10 +1086,107 @@ int GetCommand(char line[], Command *command){
     }
     return 0;
 }
+//Loading relations
 Relation RelationCtor(){
     Relation relation = {.pairs = NULL, .pairCount = 0, .maxSize = 0, .LineNumber = 0};
     relation.pairs = malloc(relation.pairCount * sizeof(Pair));
     return relation;
+}
+int PopulateRelation(DataLine *source, Pair *pair, Relation *relation, Universum *universum){
+    //Values init
+    char pairFrstItem[MAX_STRING_LENGTH]= {'\0'};
+    char pairSecondItem[MAX_STRING_LENGTH]= {'\0'};
+    int pairIndex = 0;
+    if(source->data == NULL || universum->items == NULL){
+        fprintf(stderr, "Array is not initialized.\n");
+        return 1;
+    }
+    for(int i = 0; i <source->currentLength; i++){
+        char currentChar = source->data[i];
+        if (pairIndex == MAX_STRING_LENGTH) {
+            fprintf(stderr, "Universum element exceeds the maximal length.\n");
+            return 1;
+        }
+        if(currentChar == '('){
+            currentChar += 1;
+            do{
+                if(currentChar == '('){
+                    fprintf(stderr, "Syntax error, double parentheses.\n");
+                    return 1;
+                }
+                pairFrstItem[pairIndex] = currentChar;
+            }
+            while(currentChar != ' ');
+        }
+        if(currentChar == ' '){
+            currentChar += 1;
+            do{
+                if(currentChar == ' '){
+                    fprintf(stderr, "Syntax error, double space.\n");
+                    return 1;
+                }
+                pairSecondItem[pairIndex] = currentChar;
+            }
+            while(currentChar != ')');
+
+        }
+        int frstItemId = GetItemIndex(universum, pairFrstItem);
+        int secondItemId = GetItemIndex(universum, pairSecondItem);
+        if (frstItemId == -1 || secondItemId == -1) {
+            fprintf(stderr, "Item is not present in universum");
+            return 1;
+        }
+        int result = AddToRelation(atoi(pairFrstItem), atoi(pairSecondItem), pair, relation);
+        if(result != 0){
+            fprintf(stderr, "Cannot add pair to the relation.\n");
+            return 1;
+        }
+        ClearTempWord(pairFrstItem);
+        ClearTempWord(pairSecondItem);
+        pairIndex = 0;
+
+    }
+
+}
+int AddToRelation(int left, int right, Pair *pair, Relation *relation){
+    //Checking for reallocation
+    if(relation->maxSize == relation->pairCount){
+        relation->maxSize *= 2;
+        int* tmp = realloc(relation->pairs, relation->maxSize * sizeof(int));
+        if(tmp == NULL) return 1;
+        relation->pairs->left = *tmp;
+        //relation->pairs->right = tmp;
+    }
+    relation->pairs[relation->pairCount].left = left;
+    relation->pairs[relation->pairCount].right = right;
+}
+int AddToRelations(Relations *relColl, Relation relation){
+    //Using the function to ensure capacity
+    relColl->relations = ArrAlloc(relColl->relations, sizeof(Relation), &relColl->maxRelCount, relColl->relCount);
+    if(relColl == NULL) return 1;
+    relColl->relations[relColl->relCount] = relation;
+    relColl->relCount++;
+    return 0;
+}
+int DisplayRelation(Universum universum, Relation relation){
+    if(relation.pairCount == 0){
+        printf("R");
+    }
+    else{
+        printf("R ");
+    }
+    for(int i = 0; i <relation.pairCount; i++){
+        int currentLeftItemId = relation.pairs[i].left;
+        int currentRightItemId = relation.pairs[i].right;
+        if(i + 1 == relation.pairCount){
+            printf("(%s %s)",universum.items[currentLeftItemId], universum.items[currentRightItemId]);
+        }
+        else{
+        printf("(%s %s)",universum.items[currentLeftItemId], universum.items[currentRightItemId]);
+        printf(" ");
+        }
+    }
+    printf("\n");
 }
 
 // operations with relations 
