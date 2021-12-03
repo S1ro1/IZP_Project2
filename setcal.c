@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
             case CommandKeyword:
                 CommandResult = GetCommand(currentLine.data, &command);
                 if (CommandResult == 1) return 1;
-                ResolveCommand(command, &setCollection, u);
+                //ResolveCommand(command, &setCollection, u);
                 break;
 
             default:
@@ -990,7 +990,12 @@ int GetCommand(char line[], Command *command){
     int SpaceCount = 0;
     int SpaceIdentifier = false;
     memset(command->keyword, 0, 14); //reset command
-    for(int index_1 = 0, index_2 = 0; line[index_1] != '\n'; index_1++){
+    //add to command A, B, C if not given
+    command->A = -1;
+    command->B = -1;
+    command->C = -1;
+    
+    for(int index_1 = 0, index_2 = 0; line[index_1] != '\0'; index_1++){
         if (line[index_1] == ' '){
             //check if whether there are 2 spaces in a row
             if (SpaceIdentifier){
@@ -1000,6 +1005,9 @@ int GetCommand(char line[], Command *command){
             SpaceCount++;
             index_2 = 0;
             SpaceIdentifier = true;
+            continue;
+        }
+        else if(line[index_1] == '\n'){
             continue;
         }
 
@@ -1062,12 +1070,6 @@ int GetCommand(char line[], Command *command){
             fprintf(stderr, "Too many arguments in command line\n");
             return 1;
         }
-        //add to command A, B, C if not given
-        else{
-            command->A = -1;
-            command->B = -1;
-            command->C = -1;
-        }
     }
     //check if command->keyword is correct
     if (IsKeyword(command->keyword) != 1){
@@ -1076,6 +1078,7 @@ int GetCommand(char line[], Command *command){
     }
     return 0;
 }
+
 Relation RelationCtor(){
     Relation relation = {.pairs = NULL, .pairCount = 0, .maxSize = 0, .LineNumber = 0};
     relation.pairs = malloc(relation.pairCount * sizeof(Pair));
@@ -1327,4 +1330,3 @@ int IsBijective(Relation *relationArr, int relcount, Sets *sets, Command command
     }
     return 0;
 }
-    
