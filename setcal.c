@@ -148,11 +148,20 @@ int IsBijective(Relation *, int, Sets *, Command);
 
 // --------------------------------------
 
+bool ValidNumOfparams(Command, int);
+
 int main(int argc, char *argv[]) {
+    Set universumSet = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = 1};
     Sets setCollection = {.sets = NULL, .maxSetCount = 0, .setCount = 0};
     setCollection.sets = (Set*)ArrAlloc(setCollection.sets, sizeof(Set), &setCollection.maxSetCount, 0); // Allocation
     Relations relationCollection = {.relations = NULL, .maxRelCount = 0, .relCount = 0};
     relationCollection.relations = (Relation*)ArrAlloc(relationCollection.relations, sizeof(Relation), &relationCollection.maxRelCount, 0);
+
+    bool UniversumFound = false;
+    bool SetRelFound = false;
+    bool CommandFound = false;
+
+    int error = 0;
     
     if (argc != 2) {
         fprintf(stderr, "Invalid arguments");
@@ -162,93 +171,113 @@ int main(int argc, char *argv[]) {
 
     // Universum allocation
     Universum u = {.items = NULL, .itemCount = 0, .maxItemCount = DEFAULT_ALLOCATION_SIZE};
-    int universumResult = InitUniversum(&u);
-    if (universumResult != 0) {
+    error = InitUniversum(&u);
+    if (error != 0) {
         return 1;
     }
     
     // Loading input data
-    int error = GetDataFromFile(&lineList, argv[1]);
+    error = GetDataFromFile(&lineList, argv[1]);
     if (error != 0) return 1;
 
     // Load universum and universum set
-    Set universumSet = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = 1};
-    universumResult = 
+    error = 
             PopulateUniversum(&lineList.dataLines[0], &u) || 
-            GetUniversumSet(&universumSet, u, lineList.dataLines[0]);
+            GetUniversumSet(&universumSet, u, lineList.dataLines[0]) || !IsSetUnique(universumSet);
 
-    if (!IsSetUnique(universumSet)) {
-        fprintf(stderr, "Universum contains duplicate items\n");
-        return 1;
-    }
-
-    if (universumResult == 1) {
+    if (error == 1) {
         return 1;
     }
     AddToSets(&setCollection, universumSet);
     DisplayUniversum(u);
 
-    // Resolving lines
-    //Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
-    //int CommandResult = 0;
+    UniversumFound = true;
+
+    if (lineList.rowCount == 1) {
+        fprintf(stderr, "Only universum\n");
+        return 1;
+    }
+
     for (int i = 1; i < lineList.rowCount; i++) {
         Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
         DataLine currentLine = lineList.dataLines[i];
-        int CommandResult = 0;
+        error = 0;
 
-        Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = currentLine.rowIndex + 1};
         Relation r = {.pairs = NULL, .pairCount = 0, .maxSize = 0, .LineNumber = currentLine.rowIndex + 1};
 
         switch (currentLine.keyword) {
             case SetKeyword: {
-                int result = 0;
 
-                result = 
-                    SetConstructor(&s) ||
-                    PopulateSet(&currentLine, &s, &u) ||
-                    AddToSets(&setCollection, s);
-
-                if (!IsSetUnique(s)) {
-                    fprintf(stderr, "Set on index %d has duplicate items\n", currentLine.rowIndex);
+                if (UniversumFound != true || CommandFound == true) {
+                    fprintf(stderr, "Wrong file format\n");
                     return 1;
                 }
+                Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = currentLine.rowIndex + 1};
+                error = 
+                    SetConstructor(&s) ||
+                    PopulateSet(&currentLine, &s, &u) ||
+                    AddToSets(&setCollection, s) || !IsSetUnique(s);
 
-                if (result != 0) return result;
+                if (error != 0) return 1;
                 DisplaySet(s, u);
-                if (result != 0) return result;
-                
+                SetRelFound = true;
                 break;
-
             }
                 
             case RelationKeyword: {
-                int result = 0;
-                result = 
-                    RelationCtor(&r) || 
-                    PopulateRelation(&currentLine, &r, &u) ||
-                    AddToRelations(&relationCollection, r);
-                if(result != 0) return 1;
-                if(!IsRelationUnique(r)){
-                    fprintf(stderr, "Relation on index %d has duplicate items.\n", currentLine.rowIndex);
+                if (UniversumFound != true || CommandFound == true) {
+                    fprintf(stderr, "Wrong file format\n");
                     return 1;
                 }
+                error = 
+                    RelationCtor(&r) || 
+                    PopulateRelation(&currentLine, &r, &u) ||
+                    AddToRelations(&relationCollection, r) ||
+                    !IsRelationUnique(r);
+                if(error != 0) return 1;
                 DisplayRelation(u, r);
+                SetRelFound = true;
                 break;
             }
                 
             case CommandKeyword:
-                CommandResult = GetCommand(currentLine.data, &command);
-                if (CommandResult == 1) return 1;
-                //ResolveCommand(command, &setCollection, u);
+                if (UniversumFound != true || SetRelFound != true) {
+                    fprintf(stderr, "Wrong file format\n");
+                    return 1;
+                }
+                error = GetCommand(currentLine.data, &command);
+                if (error == 1) return 1;
+                if (ResolveCommand(command, &setCollection, u) == 1){
+                    fprintf(stderr, "Invalid command\n");
+                    return 1;
+                }
+                CommandFound = true;
                 break;
 
             default:
                 fprintf(stderr, "Wrong keyword");
                 return 1;
         }
+        
     }
-    //ResolveCommand(command, sets, relations, u);
+    if (CommandFound == false) {
+        fprintf(stderr, "No commands\n");
+        return 1;
+    }
     return 0;
+}
+
+bool ValidNumOfParams(Command command, int num) {
+    if (num == 1) {
+        return (command.A != -1 && command.B == -1 && command.C == -1);
+    }
+    else if (num == 2) {
+        return (command.A != -1 && command.B != -1 && command.C == -1);
+    }
+    else if (num == 3) {
+        return (command.A != -1 && command.B != -1 && command.C != -1);
+    }
+    return false;
 }
 
 void IsEmpty(Set set) {
@@ -349,34 +378,16 @@ void SetIntersect(Set a, Set b, Universum *u) {
 
 
 void IsSubset(Set a, Set b) {
-    int DuplCount = 0;
+    int found = 0;
     for (int i = 0; i < a.itemCount; i++) {
         for (int j = 0; j < b.itemCount; j++) {
             if (a.items[i] == b.items[j]) {
-                DuplCount++;
+                found++;
                 break;
             }
         }
     }
-
-    bool equals = false;
-
-    //to check if they're equal
-    for (int i = 0; i < a.itemCount; i++) {
-        bool found = false;
-        for (int j = 0; j < b.itemCount; j++) {
-            if (a.items[i] == b.items[j]) {
-                found = true;
-            }
-        }
-        if (found == false) {
-            equals = false;
-            break;
-        }
-        equals = true;
-    }
-    
-    if (DuplCount == a.itemCount && !equals) {
+    if (found == a.itemCount && b.itemCount != a.itemCount) {
         printf("true\n");
     } else {
         printf("false\n");
@@ -384,16 +395,16 @@ void IsSubset(Set a, Set b) {
 }
 
 void IsSubsetEq(Set a, Set b) {
-    int DuplCount = 0;
+    int found = 0;
     for (int i = 0; i < a.itemCount; i++) {
         for (int j = 0; j < b.itemCount; j++) {
             if (a.items[i] == b.items[j]) {
-                DuplCount++;
+                found++;
                 break;
             }
         }
     }
-    if (DuplCount == a.itemCount) {
+    if (found == a.itemCount) {
         printf("true\n");
     } else {
         printf("false\n");
@@ -411,35 +422,54 @@ int GetSetArrIndex(int index, Sets *sets) {
 
 int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
     char *keyword = command.keyword;
-
+    
     Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
     Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
+    //Set C = setCollection->sets[(GetSetArrIndex(command.C, setCollection))];
 
     if (strcmp("empty", keyword) == 0) {
+        if (ValidNumOfParams(command, 1) == false) return 1;
+        if (GetSetArrIndex(command.A, setCollection) == -1) return 1;
         IsEmpty(A);   
     }
     else if (strcmp("card", keyword) == 0) {
+        if (ValidNumOfParams(command, 1) == false) return 1;
+        if (GetSetArrIndex(command.A, setCollection) == -1) return 1;
         Card(A);
     }
     else if (strcmp("complement", keyword) == 0) {
+        if (ValidNumOfParams(command, 1) == false) return 1;
+        if (GetSetArrIndex(command.A, setCollection) == -1) return 1;
         SetMinus(setCollection->sets[0], A, &universum);
     }
     else if (strcmp("union", keyword) == 0) {
+        if (ValidNumOfParams(command, 2) == false) return 1;
+        if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
         SetsUnion(A, B, &universum);
     }
     else if (strcmp("intersect", keyword) == 0) {
+        if (ValidNumOfParams(command, 2) == false) return 1;
+        if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
         SetIntersect(A, B, &universum);
     }
     else if (strcmp("minus", keyword) == 0) {
+        if (ValidNumOfParams(command, 2) == false) return 1;
+        if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
         SetMinus(A, B, &universum);
     }
     else if (strcmp("subseteq", keyword) == 0) {
+        if (ValidNumOfParams(command, 2) == false) return 1;
+        if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
         IsSubset(A, B);
     }
     else if (strcmp("subset", keyword) == 0) {
+        if (ValidNumOfParams(command, 2) == false) return 1;
+        if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
         IsSubset(A, B);
     }
     else if (strcmp("equals", keyword) == 0) {
+        if (ValidNumOfParams(command, 2) == false) return 1;
+        if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
         SetEquals(A, B);
     }
     /*else if (strcmp("reflexive", keyword) == 0) { // TODO: command A == -1
@@ -560,7 +590,7 @@ void* ArrAlloc(void *target, size_t typeSize, int *maxSize_p, int currentSize) {
     // Realloc
     if (*maxSize_p == currentSize) {
         *maxSize_p *= 2;
-        tmp = realloc(target, *maxSize_p);
+        tmp = realloc(target, *maxSize_p * typeSize);
     }
 
     // Check for allocation
@@ -810,7 +840,10 @@ int IsSetUnique(Set set) {
         for (int j = 0; j < set.itemCount; j++) {
             if (i == j) continue; // Avoid comparing item with itself
 
-            if (set.items[i] == set.items[j]) return 0;
+            if (set.items[i] == set.items[j]){
+                fprintf(stderr, "Set has duplicate items\n");
+                return 0;
+            }
         }
     }
 
@@ -820,7 +853,8 @@ int IsRelationUnique(Relation relation){
     for (int i = 0; i <relation.pairCount; i++){
         for(int j = 0; j < relation.pairCount; j++){
             if (i == j) continue;
-            if(relation.pairs[i].left == relation.pairs[j].left && relation.pairs[i].left == relation.pairs[j].left){
+            if(relation.pairs[i].left == relation.pairs[j].left && relation.pairs[i].left == relation.pairs[j].left) {
+                fprintf(stderr, "Relation has duplicate items\n");
                 return 0;
             }
         }
@@ -921,8 +955,10 @@ int InitUniversum(Universum *universum) {
 }
 
 int PopulateUniversum(DataLine *source, Universum *universum) {
-    if (source->keyword != UniversumKeyword) return 1;
-
+    if (source->keyword != UniversumKeyword) {
+        fprintf(stderr, "No universum\n");
+        return 1;
+    }
     char *data = source->data;
 
     int wordLength = 0;
@@ -1216,8 +1252,6 @@ int AddToRelations(Relations *relColl, Relation relation){
 }
 void DisplayRelation(Universum universum, Relation relation){
     printf("R");
-
-
     for(int i = 0; i <relation.pairCount; i++){
         int currentLeftItemId = relation.pairs[i].left;
         int currentRightItemId = relation.pairs[i].right;
