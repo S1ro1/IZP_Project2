@@ -224,6 +224,7 @@ int main(int argc, char *argv[]) {
             }
                 
             case RelationKeyword: {
+                /*
                 if (UniversumFound != true || CommandFound == true) {
                     fprintf(stderr, "Wrong file format\n");
                     return 1;
@@ -232,7 +233,7 @@ int main(int argc, char *argv[]) {
                 if(error != 0) return 1;
                 DisplayRelation(u, r);
                 SetRelFound = true;
-                break;
+                break;*/
             }
                 
             case CommandKeyword:
@@ -373,34 +374,16 @@ void SetIntersect(Set a, Set b, Universum *u) {
 
 
 void IsSubset(Set a, Set b) {
-    int DuplCount = 0;
+    int found = 0;
     for (int i = 0; i < a.itemCount; i++) {
         for (int j = 0; j < b.itemCount; j++) {
             if (a.items[i] == b.items[j]) {
-                DuplCount++;
+                found++;
                 break;
             }
         }
     }
-
-    bool equals = false;
-
-    //to check if they're equal
-    for (int i = 0; i < a.itemCount; i++) {
-        bool found = false;
-        for (int j = 0; j < b.itemCount; j++) {
-            if (a.items[i] == b.items[j]) {
-                found = true;
-            }
-        }
-        if (found == false) {
-            equals = false;
-            break;
-        }
-        equals = true;
-    }
-    
-    if (DuplCount == a.itemCount && !equals) {
+    if (found == a.itemCount && b.itemCount != a.itemCount) {
         printf("true\n");
     } else {
         printf("false\n");
@@ -408,16 +391,16 @@ void IsSubset(Set a, Set b) {
 }
 
 void IsSubsetEq(Set a, Set b) {
-    int DuplCount = 0;
+    int found = 0;
     for (int i = 0; i < a.itemCount; i++) {
         for (int j = 0; j < b.itemCount; j++) {
             if (a.items[i] == b.items[j]) {
-                DuplCount++;
+                found++;
                 break;
             }
         }
     }
-    if (DuplCount == a.itemCount) {
+    if (found == a.itemCount) {
         printf("true\n");
     } else {
         printf("false\n");
