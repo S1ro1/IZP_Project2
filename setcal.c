@@ -115,7 +115,7 @@ int RelationCtor(Relation *);
 int AddToRelation(int, int, Relation *);
 int AddToRelations(Relations *, Relation);
 int PopulateRelation(DataLine *, Relation *, Universum *);
-int DisplayRelation(Universum, Relation);
+void DisplayRelation(Universum, Relation);
 void DisplayUniversum(Universum);
 int GetUniversumSet(Set *, Universum, DataLine);
 int GetSetArrIndex(int, Sets *);
@@ -151,7 +151,8 @@ int IsBijective(Relation *, int, Sets *, Command);
 int main(int argc, char *argv[]) {
     Sets setCollection = {.sets = NULL, .maxSetCount = 0, .setCount = 0};
     setCollection.sets = (Set*)ArrAlloc(setCollection.sets, sizeof(Set), &setCollection.maxSetCount, 0); // Allocation
-    //Relation *relations = NULL;
+    Relations relationCollection = {.relations = NULL, .maxRelCount = 0, .relCount = 0};
+    relationCollection.relations = (Relation*)ArrAlloc(relationCollection.relations, sizeof(Relation), &relationCollection.maxRelCount, 0);
     
     if (argc != 2) {
         fprintf(stderr, "Invalid arguments");
@@ -222,13 +223,16 @@ int main(int argc, char *argv[]) {
                 
             case RelationKeyword: {
                 int result = 0;
-                result = RelationCtor(&r) ||PopulateRelation(&currentLine, &r, &u);
+                result = 
+                    RelationCtor(&r) || 
+                    PopulateRelation(&currentLine, &r, &u) ||
+                    AddToRelations(&relationCollection, r);
+                if(result != 0) return 1;
                 if(!IsRelationUnique(r)){
                     fprintf(stderr, "Relation on index %d has duplicate items.\n", currentLine.rowIndex);
+                    return 1;
                 }
-                if(result != 0) return result;
                 DisplayRelation(u, r);
-                if(result != 0) return result;
                 break;
             }
                 
@@ -814,13 +818,14 @@ int IsSetUnique(Set set) {
 }
 int IsRelationUnique(Relation relation){
     for (int i = 0; i <relation.pairCount; i++){
-        for(int j = 0; j < relation.pairCount; i++){
+        for(int j = 0; j < relation.pairCount; j++){
             if (i == j) continue;
-            if(relation.pairs[i].left == relation.pairs[j].right && relation.pairs[i].right == relation.pairs[j].right){
+            if(relation.pairs[i].left == relation.pairs[j].left && relation.pairs[i].left == relation.pairs[j].left){
                 return 0;
             }
         }
     }
+    return 1;
 }
 
 void DisplaySet(Set set, Universum universum) {
@@ -1107,9 +1112,9 @@ int GetCommand(char line[], Command *command){
 }
 
 //Loading relations
-    int RelationCtor(Relation *relation){
+int RelationCtor(Relation *relation){
     if(relation == NULL) return 1;
-    relation->pairs = malloc(DEFAULT_ALLOCATION_SIZE * sizeof(int));
+    relation->pairs = malloc(DEFAULT_ALLOCATION_SIZE * sizeof(Pair));
     if(relation->pairs == NULL) return 1;
     relation->maxSize = DEFAULT_ALLOCATION_SIZE;
     relation->pairCount = 0;
@@ -1120,68 +1125,86 @@ int PopulateRelation(DataLine *source, Relation *relation, Universum *universum)
     char pairFrstItem[MAX_STRING_LENGTH]= {'\0'};
     char pairSecondItem[MAX_STRING_LENGTH]= {'\0'};
     int pairIndex = 0;
+    int spaceCount = 0;
+    bool foundparentL = false;
+    bool foundparentR = false;
     if(source->data == NULL || universum->items == NULL){
         fprintf(stderr, "Array is not initialized.\n");
         return 1;
     }
-    for(int i = 0; i <source->currentLength; i++){
-        char currentChar = source->data[i];
+    for(int i = 0; i < source->currentLength-1; i++) {
         if (pairIndex == MAX_STRING_LENGTH) {
-            fprintf(stderr, "Universum element exceeds the maximal length.\n");
+            fprintf(stderr, "Relation element exceeds the maximal length.\n");
             return 1;
         }
-        if(currentChar == '('){
-            currentChar += 1;
-            do{
-                if(currentChar == '('){
-                    fprintf(stderr, "Syntax error, double parentheses.\n");
-                    return 1;
-                }
-                pairFrstItem[pairIndex] = currentChar;
+        if (source->data[i] == '(') {
+            if (foundparentR){
+                fprintf(stderr, "Wrong relation format.\n");
+                return 1;
             }
-            while(currentChar != ' ');
+            foundparentL = true;
         }
-        if(currentChar == ' '){
-            currentChar += 1;
-            do{
-                if(currentChar == ' '){
-                    fprintf(stderr, "Syntax error, double space.\n");
-                    return 1;
-                }
-                pairSecondItem[pairIndex] = currentChar;
+        else if (source->data[i] == ')') {
+            if (foundparentR){
+                fprintf(stderr, "Wrong relation format.\n");
+                return 1;
             }
-            while(currentChar != ')');
-
+            foundparentR = true;
         }
-        int frstItemId = GetItemIndex(universum, pairFrstItem);
-        int secondItemId = GetItemIndex(universum, pairSecondItem);
-        if (frstItemId == -1 || secondItemId == -1) {
-            fprintf(stderr, "Item is not present in universum");
+        else if (source->data[i] == ' ' && spaceCount <=2){
+            spaceCount += 1;
+            pairIndex = 0;
+        }
+        else if (foundparentL && spaceCount == 0) {
+            pairFrstItem[pairIndex++] = source->data[i];
+        }
+        else if (foundparentL && spaceCount == 1 ) {
+            if (source->data[i] != ' ' && source->data[i] != '\n') {
+                pairSecondItem[pairIndex++] = source->data[i];
+            }
+        }
+        else {
+            fprintf(stderr, "Wrong relation format.\n");
             return 1;
         }
-        int result = AddToRelation(atoi(pairFrstItem), atoi(pairSecondItem), relation);
-        if(result != 0){
-            fprintf(stderr, "Cannot add pair to the relation.\n");
-            return 1;
+        if ((foundparentL && foundparentR && spaceCount == 2) || source->data[i] == '\n'){
+
+            int firstItemId = GetItemIndex(universum, pairFrstItem);
+            int secondItemId = GetItemIndex(universum, pairSecondItem);
+            if (secondItemId == -1 || secondItemId == -1) {
+                fprintf(stderr, "Item is not present in universum.\n");
+                return 1;
+                }
+            int result = AddToRelation(firstItemId, secondItemId, relation);
+            if(result != 0) {
+                fprintf(stderr, "Cannot add pair to the relation.\n");
+                return 1;
+            }
+            
+            ClearTempWord(pairFrstItem);
+            ClearTempWord(pairSecondItem);
+            foundparentL = false;
+            foundparentR = false;
+            spaceCount = 0;
         }
-        ClearTempWord(pairFrstItem);
-        ClearTempWord(pairSecondItem);
-        pairIndex = 0;
 
-    }
-
+}
+return 0;
 }
 int AddToRelation(int left, int right, Relation *relation){
     //Checking for reallocation
     if(relation->maxSize == relation->pairCount){
         relation->maxSize *= 2;
-        int* tmp = realloc(relation->pairs, relation->maxSize * sizeof(int));
+        Pair *tmp = realloc(relation->pairs, relation->maxSize * sizeof(Pair));
         if(tmp == NULL) return 1;
-        relation->pairs->left = *tmp;
+        relation->pairs = tmp;
         //relation->pairs->right = tmp;
     }
     relation->pairs[relation->pairCount].left = left;
     relation->pairs[relation->pairCount].right = right;
+    relation->pairCount++;
+
+    return 0;
 }
 int AddToRelations(Relations *relColl, Relation relation){
     //Using the function to ensure capacity
@@ -1191,38 +1214,23 @@ int AddToRelations(Relations *relColl, Relation relation){
     relColl->relCount++;
     return 0;
 }
-int DisplayRelation(Universum universum, Relation relation){
-    if(relation.pairCount == 0){
-        printf("R");
-    }
-    else{
-        printf("R ");
-    }
+void DisplayRelation(Universum universum, Relation relation){
+    printf("R");
+
+
     for(int i = 0; i <relation.pairCount; i++){
         int currentLeftItemId = relation.pairs[i].left;
         int currentRightItemId = relation.pairs[i].right;
-        if(i + 1 == relation.pairCount){
-            printf("(%s %s)",universum.items[currentLeftItemId], universum.items[currentRightItemId]);
-        }
-        else{
-        printf("(%s %s)",universum.items[currentLeftItemId], universum.items[currentRightItemId]);
-        printf(" ");
-        }
+        printf(" (%s %s)",universum.items[currentLeftItemId], universum.items[currentRightItemId]);
+        
     }
     printf("\n");
-
-
-Relation RelationCtor(){
-    Relation relation = {.pairs = NULL, .pairCount = 0, .maxSize = 0, .LineNumber = 0};
-    relation.pairs = malloc(relation.pairCount * sizeof(Pair));
-    return relation;
-
 }
 
 // operations with relations 
 int FindRelIndex(Relation *relationArr, int relcount, int command){
-    for (int relindex = 0; relindex < relcount;relindex++){
-        if (relationArr[relindex].LineNumber== command){
+    for (int relindex = 0; relindex < relcount; relindex++){
+        if (relationArr[relindex].LineNumber == command){
             return relindex;
         }
     }
@@ -1366,8 +1374,6 @@ void PrintCodomain(Relation *relationArr, int relindex, Universum universum) {
             printf(" %s", universum.items[i]);
 
         }
-        
-    
     }
     printf("\n");
     free(haveSeen);
