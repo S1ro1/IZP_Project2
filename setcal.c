@@ -151,6 +151,7 @@ int IsBijective(Relation *, int, Sets *, Command);
 bool ValidNumOfparams(Command, int);
 
 int main(int argc, char *argv[]) {
+    Set universumSet = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = 1};
     Sets setCollection = {.sets = NULL, .maxSetCount = 0, .setCount = 0};
     setCollection.sets = (Set*)ArrAlloc(setCollection.sets, sizeof(Set), &setCollection.maxSetCount, 0); // Allocation
     //Relation *relations = NULL;
@@ -179,7 +180,6 @@ int main(int argc, char *argv[]) {
     if (error != 0) return 1;
 
     // Load universum and universum set
-    Set universumSet = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = 1};
     error = 
             PopulateUniversum(&lineList.dataLines[0], &u) || 
             GetUniversumSet(&universumSet, u, lineList.dataLines[0]) || !IsSetUnique(universumSet);
@@ -202,7 +202,6 @@ int main(int argc, char *argv[]) {
         DataLine currentLine = lineList.dataLines[i];
         error = 0;
 
-        Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = currentLine.rowIndex + 1};
         //Relation r = {.pairs = NULL, .pairCount = 0, .maxSize = 0, .LineNumber = currentLine.rowIndex + 1};
 
         switch (currentLine.keyword) {
@@ -212,6 +211,7 @@ int main(int argc, char *argv[]) {
                     fprintf(stderr, "Wrong file format\n");
                     return 1;
                 }
+                Set s = {.items = NULL, .itemCount = 0, .maxItemCount = 0, .lineNumber = currentLine.rowIndex + 1};
                 error = 
                     SetConstructor(&s) ||
                     PopulateSet(&currentLine, &s, &u) ||
@@ -586,7 +586,7 @@ void* ArrAlloc(void *target, size_t typeSize, int *maxSize_p, int currentSize) {
     // Realloc
     if (*maxSize_p == currentSize) {
         *maxSize_p *= 2;
-        tmp = realloc(target, *maxSize_p);
+        tmp = realloc(target, *maxSize_p * typeSize);
     }
 
     // Check for allocation
