@@ -198,6 +198,11 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
+    if (lineList.rowCount > 1000) {
+        fprintf(stderr, "File exceeds the maximal length\n");
+        return 1;
+    }
+
     for (int i = 1; i < lineList.rowCount; i++) {
         Command command = {.keyword = {'\0'}, .A = -1, .B = -1, .C = -1};
         DataLine currentLine = lineList.dataLines[i];
@@ -459,7 +464,7 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum, Re
     else if (strcmp("subseteq", keyword) == 0) {
         if (ValidNumOfParams(command, 2) == false) return 1;
         if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
-        IsSubset(A, B);
+        IsSubsetEq(A, B);
     }
     else if (strcmp("subset", keyword) == 0) {
         if (ValidNumOfParams(command, 2) == false) return 1;
@@ -1231,10 +1236,10 @@ int PopulateRelation(DataLine *source, Relation *relation, Universum *universum)
 
             int firstItemId = GetItemIndex(universum, pairFrstItem);
             int secondItemId = GetItemIndex(universum, pairSecondItem);
-            if (secondItemId == -1 || secondItemId == -1) {
+            if (firstItemId == -1 || secondItemId == -1) {
                 fprintf(stderr, "Item is not present in universum.\n");
                 return 1;
-                }
+            }
             int result = AddToRelation(firstItemId, secondItemId, relation);
             if(result != 0) {
                 fprintf(stderr, "Cannot add pair to the relation.\n");
@@ -1247,10 +1252,10 @@ int PopulateRelation(DataLine *source, Relation *relation, Universum *universum)
             foundparentR = false;
             spaceCount = 0;
         }
+    }
+    return 0;
+}
 
-}
-return 0;
-}
 int AddToRelation(int left, int right, Relation *relation){
     //Checking for reallocation
     if(relation->maxSize == relation->pairCount){
