@@ -98,7 +98,7 @@ int AddUniversumItem(Universum *, char *);
 int IsKeyword(char *);
 int GetItemIndex(Universum *, char *);
 void FreeUniversum(Universum *);
-int ResolveCommand(Command, Sets *, Universum);
+int ResolveCommand(Command, Sets *, Universum, Relations *);
 void ClearTempWord(char *);
 int GetCommand(char *, Command *);
 int CheckCommandArg(int, char);
@@ -130,21 +130,21 @@ void SetEquals(Set, Set);
 void IsSubset(Set, Set);
 void IsSubsetEq(Set, Set);
 
-int IsInSet(Sets *, int, int);
+int IsInSet(Set ,int);
 
 //funcs over relations
-int FindRelIndex(Relation *, int, int);
-void IsReflexive(Relation *, int, Universum);
-void IsSymetric(Relation *, int);
-void IsAntiSymetric(Relation *, int);
-void IsTransitive(Relation *, int);
-int IsFunction(Relation *, int);
-void PrintDomain(Relation *, int, Universum);
-void PrintCodomain(Relation *, int, Universum);
-int CheckFunctionValidity(Relation *, Sets *, int, int, int);
-int IsInjective(Relation *, int, Sets *, Command);
-int IsSurjective(Relation *, int, Sets *, Command);
-int IsBijective(Relation *, int, Sets *, Command);
+int FindRelIndex(int, Relations *);
+void IsReflexive(Relation, Universum);
+void IsSymetric(Relation);
+void IsAntiSymetric(Relation);
+void IsTransitive(Relation);
+int IsFunction(Relation);
+void PrintDomain(Relation, Universum);
+void PrintCodomain(Relation, Universum);
+int CheckFunctionValidity(Relation, Set, Set);
+int IsInjective(Relation, Set, Set);
+int IsSurjective(Relation, Set, Set, Universum);
+int IsBijective(Relation, Set, Set, Universum);
 
 // --------------------------------------
 
@@ -247,7 +247,7 @@ int main(int argc, char *argv[]) {
                 }
                 error = GetCommand(currentLine.data, &command);
                 if (error == 1) return 1;
-                if (ResolveCommand(command, &setCollection, u) == 1){
+                if (ResolveCommand(command, &setCollection, u, &relationCollection) == 1){
                     fprintf(stderr, "Invalid command\n");
                     return 1;
                 }
@@ -420,12 +420,11 @@ int GetSetArrIndex(int index, Sets *sets) {
     return -1;
 }
 
-int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
+int ResolveCommand(Command command, Sets *setCollection, Universum universum, Relations * relationCollection) {
     char *keyword = command.keyword;
     
     Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
     Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
-    //Set C = setCollection->sets[(GetSetArrIndex(command.C, setCollection))];
 
     if (strcmp("empty", keyword) == 0) {
         if (ValidNumOfParams(command, 1) == false) return 1;
@@ -472,55 +471,50 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
         if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
         SetEquals(A, B);
     }
-    /*else if (strcmp("reflexive", keyword) == 0) { // TODO: command A == -1
-        if (!(command.B != -1 || command.C != -1)) {
-            return 1;
-        }
-        int relindex = FindRelIndex(relations, relcount, command.A);
+    else if (strcmp("reflexive", keyword) == 0) { // TODO: command A == -1
+        if (ValidNumOfParams(command, 1) == false) return 1;
+        int relindex = FindRelIndex(command.A, relationCollection);
         if (relindex == -1) {
             return 1; // TODO: errorhandling
         }
-        IsReflexive(relations, relindex, universum);
+        Relation R = relationCollection->relations[relindex];
+        IsReflexive(R, universum);
     }
-    else if (strcmp("symmetric", keyword) == 0) { 
-        if (!(command.B != -1 || command.C != -1)) {
-            return 1;
-        }
-        int relindex = FindRelIndex(relations, relcount, command.A);
+    else if (strcmp("symmetric", keyword) == 0) {
+        if (ValidNumOfParams(command, 1) == false) return 1;
+        int relindex = FindRelIndex(command.A, relationCollection);
         if (relindex == -1) {
             return 1; // TODO: errorhandling
         }
-        IsSymetric(relations, relindex);
+        Relation R = relationCollection->relations[relindex];
+        IsSymetric(R);
     }
     else if (strcmp("antisymmetric", keyword) == 0) {
-        if (!(command.B != -1 || command.C != -1) && command.A == -1) {
-            return 1;
-        }
-        int relindex = FindRelIndex(relations, relcount, command.A);
+        if (ValidNumOfParams(command, 1) == false) return 1;
+        int relindex = FindRelIndex(command.A, relationCollection);
         if (relindex == -1) {
             return 1; // TODO: errorhandling
         }
-        IsAntiSymetric(relations, relindex);
+        Relation R = relationCollection->relations[relindex];
+        IsAntiSymetric(R);
         }
     else if (strcmp("transitive", keyword) == 0) {
-        if (!(command.B != -1 || command.C != -1)) {
-            return 1;
-        }
-        int relindex = FindRelIndex(relations, relcount, command.A);
+        if (ValidNumOfParams(command, 1) == false) return 1;
+        int relindex = FindRelIndex(command.A, relationCollection);
         if (relindex == -1) {
             return 1; // TODO: errorhandling
         }
-        IsTransitive(relations, relindex);
+        Relation R = relationCollection->relations[relindex];
+        IsTransitive(R);
     }
     else if (strcmp("function", keyword) == 0) {
-        if (!(command.B != -1 || command.C != -1)) {
-            return 1;
-        }
-        int relindex = FindRelIndex(relations, relcount, command.A);
+        if (ValidNumOfParams(command, 1) == false) return 1;
+        int relindex = FindRelIndex(command.A, relationCollection);
         if (relindex == -1) {
             return 1; // TODO: errorhandling
         }
-        if (IsFunction(relations, relindex)) {
+        Relation R = relationCollection->relations[relindex];
+        if (IsFunction(R)) {
             printf("true\n");
         }
         else {
@@ -528,27 +522,35 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
         }
     }
     else if (strcmp("domain", keyword) == 0) {
-        if (!(command.B != -1 || command.C != -1)) {
-            return 1;
-        }
-        int relindex = FindRelIndex(relations, relcount, command.A);
+        if (ValidNumOfParams(command, 1) == false) return 1;
+        int relindex = FindRelIndex(command.A, relationCollection);
         if (relindex == -1) {
             return 1; // TODO: errorhandling
         }
-        PrintDomain(relations, relindex, universum);
+        Relation R = relationCollection->relations[relindex];
+        PrintDomain(R, universum);
     }
     else if (strcmp("codomain", keyword) == 0) {
-        if (!(command.B != -1 || command.C != -1 )) {
-            return 1;
-        }
-        int relindex = FindRelIndex(relations, relcount, command.A);
+        if (ValidNumOfParams(command, 1) == false) return 1;
+        int relindex = FindRelIndex(command.A, relationCollection);
         if (relindex == -1) {
             return 1; // TODO: errorhandling
         }
-        PrintCodomain(relations, relindex, universum);
+        Relation R = relationCollection->relations[relindex];
+        PrintCodomain(R, universum);
     }
     else if (strcmp("injective", keyword) == 0) {
-        if (IsInjective(relations, relcount, setCollection, command)){
+        if (ValidNumOfParams(command, 3) == false) return 1;
+        int relindex = FindRelIndex(command.A, relationCollection);
+        int setIndexA = GetSetArrIndex(command.B, setCollection);
+        int setIndexB = GetSetArrIndex(command.C, setCollection);
+        if (relindex == -1 || setIndexA == -1 || setIndexB == -1) {
+            return 1; // TODO: errorhandling
+        }
+        Set A = setCollection->sets[setIndexA];
+        Set B = setCollection->sets[setIndexB];
+        Relation R = relationCollection->relations[relindex];
+        if (IsInjective(R, A, B)){
             printf("true\n");
         }
         else {
@@ -556,7 +558,17 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
         }
     }
     else if (strcmp("surjective", keyword) == 0) {
-        if (IsSurjective(relations, relcount, setCollection, command)){
+        if (ValidNumOfParams(command, 3) == false) return 1;
+        int relindex = FindRelIndex(command.A, relationCollection);
+        int setIndexA = GetSetArrIndex(command.B, setCollection);
+        int setIndexB = GetSetArrIndex(command.C, setCollection);
+        if (relindex == -1 || setIndexA == -1 || setIndexB == -1) {
+            return 1; // TODO: errorhandling
+        }
+        Set A = setCollection->sets[setIndexA];
+        Set B = setCollection->sets[setIndexB];
+        Relation R = relationCollection->relations[relindex];
+        if (IsSurjective(R, A, B, universum)){
             printf("true\n");
         }
         else {
@@ -564,13 +576,23 @@ int ResolveCommand(Command command, Sets *setCollection, Universum universum) {
         }
     }
     else if (strcmp("bijective", keyword) == 0) {
-        if (IsBijective(relations, relcount, setCollection, command)){
+        if (ValidNumOfParams(command, 3) == false) return 1;
+        int relindex = FindRelIndex(command.A, relationCollection);
+        int setIndexA = GetSetArrIndex(command.B, setCollection);
+        int setIndexB = GetSetArrIndex(command.C, setCollection);
+        if (relindex == -1 || setIndexA == -1 || setIndexB == -1) {
+            return 1; // TODO: errorhandling
+        }
+        Set A = setCollection->sets[setIndexA];
+        Set B = setCollection->sets[setIndexB];
+        Relation R = relationCollection->relations[relindex];
+        if (IsBijective(R, A, B, universum)){
             printf("true\n");
         }
         else {
             printf("false\n");
         }
-    }*/ else {    
+    } else {    
         return 1;
     }
     return 0;
@@ -853,7 +875,7 @@ int IsRelationUnique(Relation relation){
     for (int i = 0; i <relation.pairCount; i++){
         for(int j = 0; j < relation.pairCount; j++){
             if (i == j) continue;
-            if(relation.pairs[i].left == relation.pairs[j].left && relation.pairs[i].left == relation.pairs[j].left) {
+            if(relation.pairs[i].left == relation.pairs[j].left && relation.pairs[i].right == relation.pairs[j].right) {
                 fprintf(stderr, "Relation has duplicate items\n");
                 return 0;
             }
@@ -1169,6 +1191,8 @@ int PopulateRelation(DataLine *source, Relation *relation, Universum *universum)
         return 1;
     }
     for(int i = 0; i < source->currentLength-1; i++) {
+        //char curr = source->data[i];
+        if (i == 0 && source->data[i] == '\n') break;
         if (pairIndex == MAX_STRING_LENGTH) {
             fprintf(stderr, "Relation element exceeds the maximal length.\n");
             return 1;
@@ -1262,19 +1286,19 @@ void DisplayRelation(Universum universum, Relation relation){
 }
 
 // operations with relations 
-int FindRelIndex(Relation *relationArr, int relcount, int command){
-    for (int relindex = 0; relindex < relcount; relindex++){
-        if (relationArr[relindex].LineNumber == command){
+int FindRelIndex(int command, Relations *relationArr){
+    for (int relindex = 0; relindex < relationArr->relCount; relindex++){
+        if (relationArr->relations[relindex].LineNumber == command){
             return relindex;
         }
     }
     return -1;
 }
 
-void IsReflexive(Relation *relationArr, int relindex, Universum universum) {
+void IsReflexive(Relation relation, Universum universum) {
     int reflexiveElemets = 0;
-    for (int i = 0; i < universum.itemCount; i++) {
-        if (relationArr[relindex].pairs[i].right == relationArr[relindex].pairs[i].left) {
+    for (int i = 0; i < relation.pairCount; i++) {
+        if (relation.pairs[i].right == relation.pairs[i].left) {
             reflexiveElemets++;
         }
     }
@@ -1287,37 +1311,38 @@ void IsReflexive(Relation *relationArr, int relindex, Universum universum) {
 
 }
 
-void IsSymetric(Relation *relationArr, int relindex) {
+void IsSymetric(Relation relation) {
     int count = 0;
-    for (int i = 0; i < relationArr[relindex].pairCount; i++) {
-        for (int j = 0; j < relationArr[relindex].pairCount; j++) {
-            if (relationArr[relindex].pairs[i].left == relationArr[relindex].pairs[j].right) {
-                if (relationArr[relindex].pairs[i].right == relationArr[relindex].pairs[j].left) {
+    for (int i = 0; i < relation.pairCount; i++) {
+        for (int j = 0; j < relation.pairCount; j++) {
+            if (relation.pairs[i].left == relation.pairs[j].right) {
+                if (relation.pairs[i].right == relation.pairs[j].left) {
                     count++;
                     break;
                 }
                 
             }
 
+
         }
-        if (count != relationArr[relindex].pairCount) {
-            printf("false\n");
-            return;
-            }
+    }
+    if (count != relation.pairCount) {
+        printf("false\n");
+        return;
+        }
         
-        }
     printf("true\n");
 }
 
-void IsAntiSymetric(Relation *relationArr, int relindex) {
-    for (int i = 0; i < relationArr[relindex].pairCount; i++) {
-        if (relationArr[relindex].pairs[i].right == relationArr[relindex].pairs[i].left) continue;
-        for (int j = 0; j < relationArr[relindex].pairCount; j++) {
-            if (relationArr[relindex].pairs[j].right == relationArr[relindex].pairs[j].left) continue;
+void IsAntiSymetric(Relation relation) {
+    for (int i = 0; i < relation.pairCount; i++) {
+        if (relation.pairs[i].right == relation.pairs[i].left) continue;
+        for (int j = 0; j < relation.pairCount; j++) {
+            if (relation.pairs[j].right == relation.pairs[j].left) continue;
             
-            if (relationArr[relindex].pairs[i].left == relationArr[relindex].pairs[j].right){
-                if (relationArr[relindex].pairs[i].right == relationArr[relindex].pairs[j].left){
-                    if (relationArr[relindex].pairs[i].right != relationArr[relindex].pairs[i].left){
+            if (relation.pairs[i].left == relation.pairs[j].right){
+                if (relation.pairs[i].right == relation.pairs[j].left){
+                    if (relation.pairs[i].right != relation.pairs[i].left){
                         printf("false\n");
                         return;
                     }
@@ -1330,18 +1355,18 @@ void IsAntiSymetric(Relation *relationArr, int relindex) {
     printf("true\n");
 }
 
-void IsTransitive(Relation *relationArr, int relindex) {
-    for (int i = 0; i < relationArr[relindex].pairCount; i++) {
-        for (int j = 0; j < relationArr[relindex].pairCount; j++) {
-            if (relationArr[relindex].pairs[i].right == relationArr[relindex].pairs[j].left){
+void IsTransitive(Relation relation) {
+    for (int i = 0; i < relation.pairCount; i++) {
+        for (int j = 0; j < relation.pairCount; j++) {
+            if (relation.pairs[i].right == relation.pairs[j].left){
                 bool found = false;
-                int tmpRight = relationArr[relindex].pairs[j].right;
-                int tmpLeft = relationArr[relindex].pairs[i].left;
-                for (int k = 0; k < relationArr[relindex].pairCount; k++) {
-                    if (relationArr[relindex].pairs[k].right == tmpRight && relationArr[relindex].pairs[k].left == tmpLeft) {
+                int tmpRight = relation.pairs[j].right;
+                int tmpLeft = relation.pairs[i].left;
+                for (int k = 0; k < relation.pairCount; k++) {
+                    if (relation.pairs[k].right == tmpRight && relation.pairs[k].left == tmpLeft) {
                         found = true;
                     }
-                    if (k == relationArr[relindex].pairCount-1 && found == false) {
+                    if (k == relation.pairCount-1 && found == false) {
                         printf("false\n");
                         return;
                     }
@@ -1352,11 +1377,11 @@ void IsTransitive(Relation *relationArr, int relindex) {
     printf("true\n");
 }
 
-int IsFunction(Relation *relationArr, int relindex) {
-    for (int i = 0; i<relationArr[relindex].pairCount; i++) {
+int IsFunction(Relation relation) {
+    for (int i = 0; i<relation.pairCount; i++) {
         int count = 0;
-        for (int j = i; j<relationArr[relindex].pairCount; j++) {
-            if (relationArr[relindex].pairs[i].left == relationArr[relindex].pairs[j].left) {
+        for (int j = i; j<relation.pairCount; j++) {
+            if (relation.pairs[i].left == relation.pairs[j].left) {
                 count++;
                 if (count != 1) {
                     return 0;
@@ -1368,15 +1393,15 @@ int IsFunction(Relation *relationArr, int relindex) {
     return 1;
 }
 
-void PrintDomain(Relation *relationArr, int relindex, Universum universum) {
+void PrintDomain(Relation relation, Universum universum) {
 
     bool *haveSeen = malloc(sizeof(bool) * universum.itemCount);
     for (int i = 0; i < universum.itemCount; i++) {
         haveSeen[i] = false;
     }
     printf("S");
-    for(int i = 0;  i<relationArr[relindex].pairCount; i++) {
-        haveSeen[relationArr[relindex].pairs[i].left] = true;
+    for(int i = 0;  i<relation.pairCount; i++) {
+        haveSeen[relation.pairs[i].left] = true;
     
     }
     for(int i = 0;  i< universum.itemCount; i++) {
@@ -1392,15 +1417,15 @@ void PrintDomain(Relation *relationArr, int relindex, Universum universum) {
 
 }
 
-void PrintCodomain(Relation *relationArr, int relindex, Universum universum) {
+void PrintCodomain(Relation relation, Universum universum) {
 
     bool *haveSeen = malloc(sizeof(bool) * universum.itemCount);
     for (int i = 0; i < universum.itemCount; i++) {
         haveSeen[i] = false;
     }
     printf("S");
-    for(int i = 0;  i<relationArr[relindex].pairCount; i++) {
-        haveSeen[relationArr[relindex].pairs[i].right] = true;
+    for(int i = 0;  i<relation.pairCount; i++) {
+        haveSeen[relation.pairs[i].right] = true;
     
     }
     for(int i = 0;  i< universum.itemCount; i++) {
@@ -1414,9 +1439,9 @@ void PrintCodomain(Relation *relationArr, int relindex, Universum universum) {
 
 }
 
-int IsInSet(Sets *sets, int elementIndex, int setIndex) {
-    for (int i = 0; i < sets->sets[setIndex].itemCount; i++) {
-        if (sets->sets[setIndex].items[i] == elementIndex) {
+int IsInSet(Set set, int elementIndex) {
+    for (int i = 0; i < set.itemCount; i++) {
+        if (set.items[i] == elementIndex) {
             return 1;
         }
     }
@@ -1425,37 +1450,30 @@ int IsInSet(Sets *sets, int elementIndex, int setIndex) {
 }
 
 // function for last 3 operations
-int CheckFunctionValidity(Relation *relationArr, Sets *sets, int relIndex, int set1Index, int set2Index) {
-    if (!IsFunction(relationArr, relIndex)){
-        return 0;
-    }
-    for (int i = 0; i < relationArr[relIndex].pairCount; i++) {
-        if (!IsInSet(sets, relationArr[relIndex].pairs[i].left, set1Index)) {
-            return 0;
-            }
+int CheckFunctionValidity(Relation relation, Set setA, Set setB) {
+    if (!IsFunction(relation)) return 0;
+    if (setA.itemCount != relation.pairCount) return 0;
+    for (int i = 0; i < relation.pairCount; i++) {
+        if (!IsInSet(setA, relation.pairs[i].left)) return 0;
         }
-    for (int i = 0; i < relationArr[relIndex].pairCount; i++) {
-        if (!IsInSet(sets, relationArr[relIndex].pairs[i].right, set2Index)) {
-            return 0;
-        }
+    for (int i = 0; i < relation.pairCount; i++) {
+        if (!IsInSet(setB, relation.pairs[i].right)) return 0;
     }
+    
     return 1;
 }
 
-int IsInjective(Relation *relationArr, int relcount, Sets *sets, Command command) { // TODO: error handling
-    int relIndex = FindRelIndex(relationArr, relcount, command.A);
-    int set1Index = GetSetArrIndex(command.B, sets);
-    int set2Index = GetSetArrIndex(command.C, sets);
-    if (!CheckFunctionValidity(relationArr, sets, relIndex, set1Index, set2Index)) {
+int IsInjective(Relation relation, Set setA, Set setB) { // TODO: error handling
+    if (!CheckFunctionValidity(relation, setA, setB)) {
         return 0;
     }
-    bool *haveSeen = malloc(sizeof(bool) * sets->sets[set2Index].itemCount);
-    for (int i = 0; i < sets->sets[set2Index].itemCount; i++) {
+    bool *haveSeen = malloc(sizeof(bool) * setB.itemCount);
+    for (int i = 0; i < setB.itemCount; i++) {
         haveSeen[i] = false;
     }
-    for(int i = 0;  i<relationArr[relIndex].pairCount; i++) {
-        if (haveSeen[relationArr[relIndex].pairs[i].right] != true) {
-            haveSeen[relationArr[relIndex].pairs[i].right] = true;
+    for(int i = 0;  i<relation.pairCount; i++) {
+        if (haveSeen[relation.pairs[i].right] != true) {
+            haveSeen[relation.pairs[i].right] = true;
         }
         else {
             free(haveSeen);
@@ -1467,37 +1485,34 @@ int IsInjective(Relation *relationArr, int relcount, Sets *sets, Command command
     return 1;
 }
 
-int IsSurjective(Relation *relationArr, int relcount, Sets *sets, Command command) {
-    int relIndex = FindRelIndex(relationArr, relcount, command.A);
-    int set1Index = GetSetArrIndex(command.B, sets);
-    int set2Index = GetSetArrIndex(command.C, sets);
+int IsSurjective(Relation relation, Set setA, Set setB, Universum universum) {
     int count = 0;
-    if (!CheckFunctionValidity(relationArr, sets, relIndex, set1Index, set2Index)) {
+    if (!CheckFunctionValidity(relation, setA, setB)) {
         return 0;
     }
-    bool *haveSeen = malloc(sizeof(bool) * sets->sets[set2Index].itemCount);
-    for (int i = 0; i < sets->sets[set2Index].itemCount; i++) {
+    bool *haveSeen = malloc(sizeof(bool) * universum.itemCount);
+    for (int i = 0; i < universum.itemCount; i++) {
         haveSeen[i] = false;
     }
-    for(int i = 0;  i<relationArr[relIndex].pairCount; i++) {
-        haveSeen[relationArr[relIndex].pairs[i].right] = true;
+    for(int i = 0;  i < relation.pairCount; i++) {
+        haveSeen[relation.pairs[i].right] = true;
     }
     
-    for(int i = 0;  i<relationArr[relIndex].pairCount; i++) {
-        if (haveSeen[relationArr[relIndex].pairs[i].right] == true) {
+    for(int i = 0;  i < setB.itemCount; i++) {
+        if (haveSeen[setB.items[i]] == true) {
             count++;
         }
     }
     free(haveSeen);
-    if (count != sets->sets[set2Index].itemCount) {
+    if (count != setB.itemCount) {
         return 0;
     }
 
     return 1;
 }
 
-int IsBijective(Relation *relationArr, int relcount, Sets *sets, Command command) {
-    if (IsInjective(relationArr, relcount, sets, command) && IsSurjective(relationArr, relcount, sets, command)) {
+int IsBijective(Relation relation, Set setA, Set setB, Universum universum) {
+    if (IsInjective(relation, setA, setB) && IsSurjective(relation, setA, setB, universum)) {
         return 1;
     }
     return 0;
