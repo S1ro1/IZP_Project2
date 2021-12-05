@@ -1023,7 +1023,7 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
                 return 1;
             }
             if (tmpWord[31] != '\0') {
-                fprintf(stderr, "Password exceeds the maximal length\n");
+                fprintf(stderr, "Universum element exceeds the maximal length\n");
                 return 1;
             }
             wordLength = 0;
