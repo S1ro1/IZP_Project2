@@ -422,57 +422,70 @@ int GetSetArrIndex(int index, Sets *sets) {
             return i;
         }
     }
+    fprintf(stderr, "Not a set\n");
     return -1;
 }
 
 int ResolveCommand(Command command, Sets *setCollection, Universum universum, Relations * relationCollection) {
     char *keyword = command.keyword;
-    
-    Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
-    Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
 
     if (strcmp("empty", keyword) == 0) {
         if (ValidNumOfParams(command, 1) == false) return 1;
         if (GetSetArrIndex(command.A, setCollection) == -1) return 1;
+        Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
         IsEmpty(A);   
     }
     else if (strcmp("card", keyword) == 0) {
         if (ValidNumOfParams(command, 1) == false) return 1;
         if (GetSetArrIndex(command.A, setCollection) == -1) return 1;
+        Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
         Card(A);
     }
     else if (strcmp("complement", keyword) == 0) {
         if (ValidNumOfParams(command, 1) == false) return 1;
         if (GetSetArrIndex(command.A, setCollection) == -1) return 1;
+        Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
         SetMinus(setCollection->sets[0], A, &universum);
     }
     else if (strcmp("union", keyword) == 0) {
         if (ValidNumOfParams(command, 2) == false) return 1;
         if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
+        Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
+        Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
         SetsUnion(A, B, &universum);
     }
     else if (strcmp("intersect", keyword) == 0) {
         if (ValidNumOfParams(command, 2) == false) return 1;
         if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
+        Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
+        Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
         SetIntersect(A, B, &universum);
     }
     else if (strcmp("minus", keyword) == 0) {
         if (ValidNumOfParams(command, 2) == false) return 1;
         if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
+        Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
+        Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
         SetMinus(A, B, &universum);
     }
     else if (strcmp("subseteq", keyword) == 0) {
         if (ValidNumOfParams(command, 2) == false) return 1;
         if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
+        Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
+        Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
         IsSubsetEq(A, B);
     }
     else if (strcmp("subset", keyword) == 0) {
         if (ValidNumOfParams(command, 2) == false) return 1;
         if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
+        Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
+        Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
         IsSubset(A, B);
     }
     else if (strcmp("equals", keyword) == 0) {
         if (ValidNumOfParams(command, 2) == false) return 1;
+        Set A = setCollection->sets[(GetSetArrIndex(command.A, setCollection))];
+        Set B = setCollection->sets[(GetSetArrIndex(command.B, setCollection))];
         if (GetSetArrIndex(command.A, setCollection) == -1 || GetSetArrIndex(command.B, setCollection) == -1) return 1;
         SetEquals(A, B);
     }
@@ -611,7 +624,7 @@ void* ArrAlloc(void *target, size_t typeSize, int *maxSize_p, int currentSize) {
     // New allocation
     if (*maxSize_p == 0 && currentSize == 0) {
        *maxSize_p = DEFAULT_ALLOCATION_SIZE;
-       tmp = malloc(typeSize * *maxSize_p);
+       tmp = malloc(*maxSize_p * typeSize);
     }
 
     // Realloc
@@ -989,7 +1002,7 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
     char *data = source->data;
 
     int wordLength = 0;
-    char tmpWord[31] = {'\0'};
+    char tmpWord[32] = {'\0'};
     
     for (int i = 0; data[i] != '\0'; i++) {
         char currentChar = data[i];
@@ -1001,6 +1014,7 @@ int PopulateUniversum(DataLine *source, Universum *universum) {
                 } else {
                     if (strlen(tmpWord) != 0){
                         AddUniversumItem(universum, tmpWord);
+                        ClearTempWord(tmpWord);
                     }
                     
                     break;
@@ -1059,9 +1073,7 @@ int IsKeyword(char *element) {
     return 0;
 }
 void ClearTempWord(char *tmpWord) {
-    for (int i = 0; tmpWord[i] !='\0';i++) {
-        tmpWord[i]='\0';
-    }
+    memset(tmpWord, '\0', sizeof(char) * MAX_STRING_LENGTH);
 }
 
 
@@ -1297,6 +1309,7 @@ int FindRelIndex(int command, Relations *relationArr){
             return relindex;
         }
     }
+    fprintf(stderr, "Not a relation\n");
     return -1;
 }
 
