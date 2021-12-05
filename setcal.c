@@ -1,11 +1,11 @@
 /*
-* IZP - Projekt 2 - Práce s datovými strukturami
+* IZP - Projekt 2 - Prace s datovymi strukturami
 ***************************************************
 * Matej Sirovatka - xsirov00@stud.fit.vutbr.cz - xsirov00
-* Josef Unčovský - xuncov00@stud.fit.vutbr.cz - xuncov00
-* Michal Ľaš - xlasmi00@stud.fit.vutbr.cz - xlasmi00
-* Petr Večeřa - xvecer29@stud.fit.vutbr.cz - xvecer29
-* Jakub Kontrík - xkontr02@stud.fit.vutbr.cz - xkontr02
+* Josef Uncovsky - xuncov00@stud.fit.vutbr.cz - xuncov00
+* Michal Las - xlasmi00@stud.fit.vutbr.cz - xlasmi00
+* Petr Vecera - xvecer29@stud.fit.vutbr.cz - xvecer29
+* Jakub Kontrik - xkontr02@stud.fit.vutbr.cz - xkontr02
 */
 
 #include <stdio.h>
